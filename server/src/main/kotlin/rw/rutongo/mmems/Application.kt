@@ -24,6 +24,8 @@ import rw.rutongo.mmems.modules.equipment.EquipmentService
 import rw.rutongo.mmems.modules.equipment.equipmentRoutes
 import rw.rutongo.mmems.modules.importer.ImportService
 import rw.rutongo.mmems.modules.importer.importRoutes
+import rw.rutongo.mmems.modules.status.StatusService
+import rw.rutongo.mmems.modules.status.statusRoutes
 import java.time.Instant
 import java.nio.file.Path
 
@@ -43,10 +45,11 @@ fun Application.module() {
     val identity = IdentityService(dataSource, signer)
     val equipment = EquipmentService(dataSource)
     val importer = ImportService(dataSource)
+    val statuses = StatusService(dataSource)
     install(Koin) { modules(koinModule {
         single<Clock> { Clock { Instant.now() } }
         single<BlobStore> { PrivateFileBlobStore(Path.of(System.getenv("BLOB_STORAGE_DIR") ?: "data/blobs")) }
-        single { identity }; single { signer }; single { equipment }; single { importer }
+        single { identity }; single { signer }; single { equipment }; single { importer }; single { statuses }
     }) }
     install(ContentNegotiation) { json() }
     install(StatusPages) {
@@ -64,6 +67,7 @@ fun Application.module() {
         identityRoutes(identity, signer)
         equipmentRoutes(equipment, identity, signer)
         importRoutes(importer, identity, signer)
+        statusRoutes(statuses, identity, signer)
     }
 }
 

@@ -4,7 +4,7 @@ Kotlin monolith for mining equipment maintenance workflows. The implementation f
 
 ## Current scope
 
-Sprint 0 foundation, Sprint 1 identity/security and the Sprint 2 organization/equipment/import foundation: Gradle multi-project, Ktor API, PostgreSQL/Flyway, hash-chained audit, login and session rotation, site-scoped roles, organization references, equipment directory and movements, technician/operator references, configurable Excel import profiles, preview/commit/rejection CSV, and private file/blob storage.
+Sprint 0 foundation, Sprint 1 identity/security, Sprint 2 organization/equipment/import and Sprint 3 status/history backend: Gradle multi-project, Ktor API, PostgreSQL/Flyway, hash-chained audit, login and session rotation, site-scoped roles, organization references, equipment directory and movements, configurable Excel imports, status event history and optimistic status updates, Active Problems, and a site-scoped SSE event stream. Sprint 3 still requires a green CI run and database integration validation.
 
 ## Run locally
 
@@ -23,3 +23,5 @@ Start PostgreSQL, then run the server distribution once with `bootstrap-admin`, 
 Authentication routes are under `/api/v1/auth`. Web refresh tokens are issued as Secure, HttpOnly, SameSite=Strict cookies; refresh requests require `X-CSRF-Token` and `X-Requested-With: rutongo-mmems`. Android clients receive an opaque refresh token in the response body.
 
 Administrators create import profiles at `/api/v1/import-profiles`, mapping domain fields to the actual spreadsheet headers. Upload `.xlsx` files to `/api/v1/imports` as multipart fields `profileId` and `file`; inspect `/api/v1/imports/{id}`, then commit with `applyUpdates` as needed. Preview is dry-run against business tables, unknown columns are preserved, rejected rows can be downloaded as CSV, and repeat imports classify already-applied rows as unchanged. Files are limited to 20 MiB.
+
+Status updates use `POST /api/v1/equipment/{id}/status` with `If-Match` set to the equipment version and an `Idempotency-Key` header. Status history is available at `/api/v1/equipment/{id}/status-events`; active `DOWN` and `UNDER_REPAIR` equipment is listed at `/api/v1/active-problems`. Authenticated clients can subscribe to `/api/v1/events` using Server-Sent Events; `Last-Event-ID` supports resuming from the last delivered event.
