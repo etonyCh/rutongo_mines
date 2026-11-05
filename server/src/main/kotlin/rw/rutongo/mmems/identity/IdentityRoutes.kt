@@ -116,7 +116,7 @@ fun Route.identityRoutes(identity: IdentityService, signer: TokenSigner) {
     }
 }
 
-private suspend fun ApplicationCall.authenticated(identity: IdentityService, signer: TokenSigner): Principal? {
+internal suspend fun ApplicationCall.authenticated(identity: IdentityService, signer: TokenSigner): Principal? {
     val bearer = request.headers[HttpHeaders.Authorization]?.takeIf { it.startsWith("Bearer ", true) }?.substringAfter(' ')
     val tokenPrincipal = bearer?.let(signer::verify)
     val principal = tokenPrincipal?.let { identity.currentPrincipal(it.id) }

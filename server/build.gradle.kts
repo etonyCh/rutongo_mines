@@ -23,6 +23,7 @@ dependencies {
     implementation("com.zaxxer:HikariCP:6.2.1")
     implementation("org.jetbrains.exposed:exposed-core:0.59.0")
     implementation("org.jetbrains.exposed:exposed-jdbc:0.59.0")
+    implementation("org.apache.poi:poi-ooxml:5.4.1")
     implementation("com.nimbusds:nimbus-jose-jwt:10.0.2")
     implementation("de.mkammerer:argon2-jvm:2.11")
     implementation("ch.qos.logback:logback-classic:1.5.18")

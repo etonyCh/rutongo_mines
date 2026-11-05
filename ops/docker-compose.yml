@@ -25,9 +25,12 @@ services:
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-only}
     ports:
       - "8080:8080"
+    volumes:
+      - application_files:/app/data
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
   postgres_data:
+  application_files:

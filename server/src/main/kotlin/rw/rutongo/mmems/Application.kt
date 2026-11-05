@@ -15,10 +15,17 @@ import org.flywaydb.core.Flyway
 import org.koin.dsl.module as koinModule
 import org.koin.ktor.plugin.Koin
 import rw.rutongo.mmems.platform.Clock
+import rw.rutongo.mmems.platform.BlobStore
+import rw.rutongo.mmems.platform.PrivateFileBlobStore
 import rw.rutongo.mmems.identity.IdentityService
 import rw.rutongo.mmems.identity.TokenSigner
 import rw.rutongo.mmems.identity.identityRoutes
+import rw.rutongo.mmems.modules.equipment.EquipmentService
+import rw.rutongo.mmems.modules.equipment.equipmentRoutes
+import rw.rutongo.mmems.modules.importer.ImportService
+import rw.rutongo.mmems.modules.importer.importRoutes
 import java.time.Instant
+import java.nio.file.Path
 
 @Serializable
 data class ApiError(val code: String, val message: String, val requestId: String? = null)
@@ -34,7 +41,13 @@ fun Application.module() {
     environment.monitor.subscribe(ApplicationStopped) { dataSource.close() }
     val signer = TokenSigner.fromEnvironment()
     val identity = IdentityService(dataSource, signer)
-    install(Koin) { modules(koinModule { single<Clock> { Clock { Instant.now() } }; single { identity }; single { signer } }) }
+    val equipment = EquipmentService(dataSource)
+    val importer = ImportService(dataSource)
+    install(Koin) { modules(koinModule {
+        single<Clock> { Clock { Instant.now() } }
+        single<BlobStore> { PrivateFileBlobStore(Path.of(System.getenv("BLOB_STORAGE_DIR") ?: "data/blobs")) }
+        single { identity }; single { signer }; single { equipment }; single { importer }
+    }) }
     install(ContentNegotiation) { json() }
     install(StatusPages) {
         exception<Throwable> { call, cause ->
@@ -49,6 +62,8 @@ fun Application.module() {
     routing {
         get("/health") { call.respond(mapOf("status" to "ok")) }
         identityRoutes(identity, signer)
+        equipmentRoutes(equipment, identity, signer)
+        importRoutes(importer, identity, signer)
     }
 }
 
