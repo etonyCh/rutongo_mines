@@ -7,7 +7,6 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 import org.apache.poi.openxml4j.opc.OPCPackage
-import org.apache.poi.openxml4j.opc.PackageAccess
 import org.apache.poi.ss.usermodel.DataFormatter
 import org.apache.poi.util.XMLHelper
 import org.apache.poi.openxml4j.util.ZipSecureFile
@@ -233,7 +232,7 @@ class ImportService(private val dataSource: DataSource, storageDirectory: Path =
     }
 
     private fun streamWorkbook(bytes: ByteArray,requestedSheet: String?,consume: (Int,Map<String,String>)->Unit) {
-        OPCPackage.open(ByteArrayInputStream(bytes),PackageAccess.READ).use { pkg ->
+        OPCPackage.open(ByteArrayInputStream(bytes)).use { pkg ->
             val reader=XSSFReader(pkg)
             val sheets=reader.sheetsData as XSSFReader.SheetIterator
             var found=false

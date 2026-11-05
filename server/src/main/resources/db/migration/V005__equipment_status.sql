@@ -26,5 +26,6 @@ create table equipment_status_event (
 );
 create index equipment_status_event_history_idx on equipment_status_event(equipment_id, occurred_at desc, seq desc);
 create index equipment_status_event_site_idx on equipment_status_event(site_id, occurred_at desc);
+create index equipment_status_event_recorded_idx on equipment_status_event(recorded_at, id);
 create trigger equipment_status_event_immutable before update or delete on equipment_status_event
   for each row execute function forbid_update_delete();

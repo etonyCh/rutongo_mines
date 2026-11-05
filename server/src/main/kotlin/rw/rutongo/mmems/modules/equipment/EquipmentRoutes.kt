@@ -60,7 +60,7 @@ fun Route.equipmentRoutes(service: EquipmentService, identity: IdentityService, 
             val user=call.authenticated(identity,signer) ?: return@put
             if(!RolePermissions.allows(user.role,"CONFIG_MANAGE")) { call.respond(HttpStatusCode.Forbidden,ApiError("FORBIDDEN","Only an Administrator can update shifts.")); return@put }
             val expected=call.request.headers[HttpHeaders.IfMatch]?.trim('"')?.toLongOrNull()
-            if(expected==null) { call.respond(HttpStatusCode.PreconditionRequired,ApiError("IF_MATCH_REQUIRED","A valid If-Match version is required.")); return@put }
+            if(expected==null) { call.respond(HttpStatusCode.fromValue(428),ApiError("IF_MATCH_REQUIRED","A valid If-Match version is required.")); return@put }
             try { call.respond(service.updateShift(user.id,call.parameters["code"] ?: "",expected,call.receive<UpdateShiftRequest>().name)) }
             catch(e: IllegalArgumentException) { call.respond(HttpStatusCode.BadRequest,ApiError("INVALID_SHIFT",e.message ?: "The shift is invalid.")) }
             catch(e: rw.rutongo.mmems.identity.AuthFailure) { call.respond(HttpStatusCode.Conflict,ApiError(e.code,"The shift could not be updated.")) }
@@ -76,7 +76,7 @@ fun Route.equipmentRoutes(service: EquipmentService, identity: IdentityService, 
             val user=call.authenticated(identity,signer) ?: return@put
             if(!RolePermissions.allows(user.role,"CONFIG_MANAGE")) { call.respond(HttpStatusCode.Forbidden,ApiError("FORBIDDEN","Only an Administrator can update sites.")); return@put }
             val expected=call.request.headers[HttpHeaders.IfMatch]?.trim('"')?.toLongOrNull()
-            if(expected==null) { call.respond(HttpStatusCode.PreconditionRequired,ApiError("IF_MATCH_REQUIRED","A valid If-Match version is required.")); return@put }
+            if(expected==null) { call.respond(HttpStatusCode.fromValue(428),ApiError("IF_MATCH_REQUIRED","A valid If-Match version is required.")); return@put }
             try { val body=call.receive<UpdateSiteRequest>(); call.respond(service.updateSite(user,UUID.fromString(call.parameters["id"]),expected,body.name,body.timezone,body.state)) }
             catch(e: IllegalArgumentException) { call.respond(HttpStatusCode.BadRequest,ApiError("INVALID_SITE",e.message ?: "The site is invalid.")) }
             catch(e: rw.rutongo.mmems.identity.AuthFailure) { val status=if(e.code=="SITE_NOT_AUTHORIZED") HttpStatusCode.Forbidden else if(e.code=="SITE_VERSION_CONFLICT") HttpStatusCode.Conflict else HttpStatusCode.NotFound; call.respond(status,ApiError(e.code,"The site could not be updated.")) }
@@ -92,7 +92,7 @@ fun Route.equipmentRoutes(service: EquipmentService, identity: IdentityService, 
             val user=call.authenticated(identity,signer) ?: return@put
             if(!RolePermissions.allows(user.role,"CONFIG_MANAGE")) { call.respond(HttpStatusCode.Forbidden,ApiError("FORBIDDEN","Only an Administrator can update tunnels.")); return@put }
             val expected=call.request.headers[HttpHeaders.IfMatch]?.trim('"')?.toLongOrNull()
-            if(expected==null) { call.respond(HttpStatusCode.PreconditionRequired,ApiError("IF_MATCH_REQUIRED","A valid If-Match version is required.")); return@put }
+            if(expected==null) { call.respond(HttpStatusCode.fromValue(428),ApiError("IF_MATCH_REQUIRED","A valid If-Match version is required.")); return@put }
             try { val body=call.receive<UpdateTunnelRequest>(); call.respond(service.updateTunnel(user,UUID.fromString(call.parameters["id"]),expected,body.code,body.name,body.state)) }
             catch(e: IllegalArgumentException) { call.respond(HttpStatusCode.BadRequest,ApiError("INVALID_TUNNEL",e.message ?: "The tunnel is invalid.")) }
             catch(e: rw.rutongo.mmems.identity.AuthFailure) { val status=when(e.code) { "SITE_NOT_AUTHORIZED"->HttpStatusCode.Forbidden; "TUNNEL_VERSION_CONFLICT","TUNNEL_ALREADY_EXISTS"->HttpStatusCode.Conflict; else->HttpStatusCode.NotFound }; call.respond(status,ApiError(e.code,"The tunnel could not be updated.")) }
@@ -132,7 +132,7 @@ fun Route.equipmentRoutes(service: EquipmentService, identity: IdentityService, 
             val user=call.authenticated(identity,signer) ?: return@put
             if(!RolePermissions.allows(user.role,"CONFIG_MANAGE")) { call.respond(HttpStatusCode.Forbidden,ApiError("FORBIDDEN","Only an Administrator can update equipment.")); return@put }
             val expected=call.request.headers[HttpHeaders.IfMatch]?.trim('"')?.toLongOrNull()
-            if(expected==null) { call.respond(HttpStatusCode.PreconditionRequired,ApiError("IF_MATCH_REQUIRED","A valid If-Match version is required.")); return@put }
+            if(expected==null) { call.respond(HttpStatusCode.fromValue(428),ApiError("IF_MATCH_REQUIRED","A valid If-Match version is required.")); return@put }
             try {
                 val id=UUID.fromString(call.parameters["id"])
                 val body=call.receive<UpdateEquipmentRequest>()
@@ -157,7 +157,7 @@ fun Route.equipmentRoutes(service: EquipmentService, identity: IdentityService, 
         post("/equipment/{id}/move") {
             val user=call.authenticated(identity,signer) ?: return@post
             val expected=call.request.headers[HttpHeaders.IfMatch]?.trim('"')?.toLongOrNull()
-            if(expected==null) { call.respond(HttpStatusCode.PreconditionRequired,ApiError("IF_MATCH_REQUIRED","A valid If-Match version is required.")); return@post }
+            if(expected==null) { call.respond(HttpStatusCode.fromValue(428),ApiError("IF_MATCH_REQUIRED","A valid If-Match version is required.")); return@post }
             try {
                 val id=UUID.fromString(call.parameters["id"])
                 val body=call.receive<MovementRequest>()

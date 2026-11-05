@@ -1,7 +1,7 @@
 plugins {
-    kotlin("jvm") version "2.1.20"
-    kotlin("plugin.serialization") version "2.1.20"
-    id("io.ktor.plugin") version "3.1.3"
+    kotlin("jvm")
+    kotlin("plugin.serialization")
+    id("io.ktor.plugin")
     application
 }
 
@@ -29,10 +29,10 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:1.5.18")
     testImplementation(kotlin("test-junit5"))
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
-    testImplementation("org.testcontainers:postgresql:1.20.6")
-    testImplementation("org.testcontainers:junit-jupiter:1.20.6")
+    testImplementation("org.testcontainers:postgresql:1.21.4")
+    testImplementation("org.testcontainers:junit-jupiter:1.21.4")
     testImplementation("io.ktor:ktor-server-test-host-jvm:3.1.3")
-    testRuntimeOnly("org.junit.platform:junit-platform-launch")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.11.4")
 }
 
 kotlin { jvmToolchain(21) }

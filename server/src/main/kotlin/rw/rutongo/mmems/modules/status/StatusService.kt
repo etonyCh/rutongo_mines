@@ -22,11 +22,9 @@ class StatusService(private val dataSource:DataSource) {
         val errors=StatusPolicy.validate(StatusChangeInput(newStatus,problem,actionTaken))
         require(errors.isEmpty()) { errors.joinToString(" ") { it.message } }
         dataSource.connection.use { c -> c.autoCommit=false; try {
-            findByKey(c,idempotencyKey)?.let {
-                if(!RolePermissions.allows(actor.role,"STATUS_UPDATE") || it.event.userId!=actor.id.toString() || !hasSiteAccess(c,actor,UUID.fromString(it.event.siteId))) throw AuthFailure("IDEMPOTENCY_KEY_REPLAY_FORBIDDEN")
-                c.rollback(); return it
-            }
+            replay(c,actor,idempotencyKey)?.let { c.rollback(); return it }
             val equipment=c.prepareStatement("select e.site_id,e.tunnel_id,e.current_status,e.version,u.employee_id from equipment e join app_user u on u.id=? where e.id=? for update of e").use { ps -> ps.setObject(1,actor.id); ps.setObject(2,equipmentId); ps.executeQuery().use { rs -> if(!rs.next()) throw AuthFailure("EQUIPMENT_NOT_FOUND"); EquipmentLock(rs.getObject(1,UUID::class.java),rs.getObject(2,UUID::class.java),rs.getString(3),rs.getLong(4),rs.getString(5)) } }
+            replay(c,actor,idempotencyKey)?.let { c.rollback(); return it }
             if(!RolePermissions.allows(actor.role,"STATUS_UPDATE")) throw AuthFailure("FORBIDDEN")
             if(!hasSiteAccess(c,actor,equipment.siteId)) throw AuthFailure("SITE_NOT_AUTHORIZED")
             if(equipment.version!=expectedVersion) throw AuthFailure("EQUIPMENT_VERSION_CONFLICT")
@@ -35,7 +33,7 @@ class StatusService(private val dataSource:DataSource) {
             if(shiftId!=null && !exists(c,"select exists(select 1 from shift where id=?)",shiftId)) throw AuthFailure("SHIFT_NOT_FOUND")
             val seq=c.prepareStatement("select coalesce(max(seq),0)+1 from equipment_status_event where equipment_id=?").use { ps -> ps.setObject(1,equipmentId); ps.executeQuery().use { it.next(); it.getLong(1) } }
             val id=UUID.randomUUID()
-            c.prepareStatement("""insert into equipment_status_event(id,equipment_id,seq,previous_status,new_status,problem,action_taken,parts_required,remarks,site_id,tunnel_id,shift_id,user_id,user_eid,occurred_at,source,idempotency_key) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'MANUAL',?)""").use { ps ->
+            c.prepareStatement("""insert into equipment_status_event(id,equipment_id,seq,previous_status,new_status,problem,action_taken,parts_required,remarks,site_id,tunnel_id,shift_id,user_id,user_eid,occurred_at,recorded_at,source,idempotency_key) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,clock_timestamp(),'MANUAL',?)""").use { ps ->
                 ps.setObject(1,id); ps.setObject(2,equipmentId); ps.setLong(3,seq); ps.setString(4,equipment.status); ps.setString(5,newStatus.name); ps.setString(6,problem?.trim()); ps.setString(7,actionTaken?.trim()); ps.setString(8,partsRequired?.trim()); ps.setString(9,remarks?.trim()); ps.setObject(10,equipment.siteId); ps.setObject(11,effectiveTunnel); ps.setObject(12,shiftId); ps.setObject(13,actor.id); ps.setString(14,equipment.employeeId); ps.setTimestamp(15,Timestamp.from(occurredAt)); ps.setString(16,idempotencyKey); ps.executeUpdate()
             }
             val latest=c.prepareStatement("select id,new_status,occurred_at from equipment_status_event where equipment_id=? order by occurred_at desc,seq desc limit 1").use { ps -> ps.setObject(1,equipmentId); ps.executeQuery().use { rs -> rs.next(); Triple(rs.getObject(1,UUID::class.java),rs.getString(2),rs.getTimestamp(3).toInstant()) } }
@@ -53,7 +51,10 @@ class StatusService(private val dataSource:DataSource) {
     fun history(actor:Principal,equipmentId:UUID,limit:Int=100):List<StatusEventView> = dataSource.connection.use { c ->
         if(!RolePermissions.allows(actor.role,"EQUIPMENT_VIEW")) throw AuthFailure("FORBIDDEN")
         if(!hasSiteAccess(c,actor,siteForEquipment(c,equipmentId))) throw AuthFailure("SITE_NOT_AUTHORIZED")
-        c.prepareStatement("select * from equipment_status_event where equipment_id=? order by occurred_at desc,seq desc limit ?").use { ps -> ps.setObject(1,equipmentId); ps.setInt(2,limit.coerceIn(1,200)); ps.executeQuery().use { rs -> buildList { while(rs.next()) add(rs.toView()) } } }
+        c.prepareStatement("""select ev.* from equipment_status_event ev where ev.equipment_id=? and (exists(select 1 from user_site_access a where a.user_id=? and a.site_id=ev.site_id) or (? and not exists(select 1 from user_site_access a where a.user_id=?))) order by ev.occurred_at desc,ev.seq desc limit ?""").use { ps ->
+            ps.setObject(1,equipmentId); ps.setObject(2,actor.id); ps.setBoolean(3,actor.role in broadRoles); ps.setObject(4,actor.id); ps.setInt(5,limit.coerceIn(1,200))
+            ps.executeQuery().use { rs -> buildList { while(rs.next()) add(rs.toView()) } }
+        }
     }
 
     fun activeProblems(actor:Principal,siteId:UUID?=null,limit:Int=100):List<StatusEventView> = dataSource.connection.use { c ->
@@ -63,9 +64,13 @@ class StatusService(private val dataSource:DataSource) {
     }
 
     fun eventsAfter(actor:Principal,after:Instant?,afterId:UUID?=null):List<StatusEventView> = dataSource.connection.use { c ->
+        if(!RolePermissions.allows(actor.role,"EQUIPMENT_VIEW")) throw AuthFailure("FORBIDDEN")
         c.prepareStatement("select ev.* from equipment_status_event ev where (?::timestamptz is null or ev.recorded_at>? or (ev.recorded_at=? and ev.id>?)) and (exists(select 1 from user_site_access a where a.user_id=? and a.site_id=ev.site_id) or (? and not exists(select 1 from user_site_access a where a.user_id=?))) order by ev.recorded_at,ev.id limit 100").use { ps -> ps.setTimestamp(1,after?.let(Timestamp::from)); ps.setTimestamp(2,after?.let(Timestamp::from)); ps.setTimestamp(3,after?.let(Timestamp::from)); ps.setObject(4,afterId ?: UUID(0,0)); ps.setObject(5,actor.id); ps.setBoolean(6,actor.role in broadRoles); ps.setObject(7,actor.id); ps.executeQuery().use { rs -> buildList { while(rs.next()) add(rs.toView()) } } }
     }
 
+    private fun replay(c:Connection,actor:Principal,key:String):StatusResult? = findByKey(c,key)?.also {
+        if(!RolePermissions.allows(actor.role,"STATUS_UPDATE") || it.event.userId!=actor.id.toString() || !hasSiteAccess(c,actor,UUID.fromString(it.event.siteId))) throw AuthFailure("IDEMPOTENCY_KEY_REPLAY_FORBIDDEN")
+    }
     private fun findByKey(c:Connection,key:String):StatusResult? = c.prepareStatement("select * from equipment_status_event where idempotency_key=?").use { ps -> ps.setString(1,key); ps.executeQuery().use { rs -> if(!rs.next()) null else { val ev=rs.toView(); val version=c.prepareStatement("select version from equipment where id=?").use { p -> p.setObject(1,UUID.fromString(ev.equipmentId)); p.executeQuery().use { it.next(); it.getLong(1) } }; StatusResult(ev,version,false) } } }
     private fun loadEvent(c:Connection,id:UUID)=c.prepareStatement("select * from equipment_status_event where id=?").use { ps -> ps.setObject(1,id); ps.executeQuery().use { it.next(); it.toView() } }
     private fun siteForEquipment(c:Connection,id:UUID)=c.prepareStatement("select site_id from equipment where id=?").use { ps -> ps.setObject(1,id); ps.executeQuery().use { if(it.next()) it.getObject(1,UUID::class.java) else throw AuthFailure("EQUIPMENT_NOT_FOUND") } }

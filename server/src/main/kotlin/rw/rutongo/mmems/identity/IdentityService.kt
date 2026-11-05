@@ -39,13 +39,21 @@ class TokenSigner private constructor(private val privateKey: RSAPrivateKey, pri
         return jwt.serialize()
     }
 
-    fun verify(raw: String): Principal? = try {
-        val jwt = SignedJWT.parse(raw)
-        if (jwt.header.algorithm != JWSAlgorithm.RS256 || !jwt.verify(RSASSAVerifier(publicKey))) return null
-        val claims = jwt.jwtClaimsSet
-        if (claims.issuer != "rutongo-mmems" || claims.expirationTime.toInstant().isBefore(Instant.now())) return null
-        Principal(UUID.fromString(claims.subject), claims.getStringClaim("username"), Role.valueOf(claims.getStringClaim("role")), claims.getBooleanClaim("mustChangePassword"))
-    } catch (_: Exception) { null }
+    fun verify(raw: String): Principal? {
+        return try {
+            val jwt = SignedJWT.parse(raw)
+            if (jwt.header.algorithm != JWSAlgorithm.RS256 || !jwt.verify(RSASSAVerifier(publicKey))) {
+                null
+            } else {
+                val claims = jwt.jwtClaimsSet
+                if (claims.issuer != "rutongo-mmems" || claims.expirationTime.toInstant().isBefore(Instant.now())) {
+                    null
+                } else {
+                    Principal(UUID.fromString(claims.subject), claims.getStringClaim("username"), Role.valueOf(claims.getStringClaim("role")), claims.getBooleanClaim("mustChangePassword"))
+                }
+            }
+        } catch (_: Exception) { null }
+    }
 
     companion object {
         internal fun createForTests(): TokenSigner = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair().let { TokenSigner(it.private as RSAPrivateKey, it.public as RSAPublicKey) }

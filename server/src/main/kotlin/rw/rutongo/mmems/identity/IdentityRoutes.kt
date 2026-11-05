@@ -88,7 +88,7 @@ fun Route.identityRoutes(identity: IdentityService, signer: TokenSigner) {
                 val principal = call.authenticated(identity, signer) ?: return@put
                 if (!RolePermissions.allows(principal.role, "USER_MANAGE")) { call.respond(HttpStatusCode.Forbidden, ApiError("FORBIDDEN", "You are not allowed to manage users.")); return@put }
                 val expectedVersion = call.request.headers[HttpHeaders.IfMatch]?.trim('"')?.toLongOrNull()
-                if (expectedVersion == null) { call.respond(HttpStatusCode.PreconditionRequired, ApiError("IF_MATCH_REQUIRED", "A valid If-Match version is required.")); return@put }
+                if (expectedVersion == null) { call.respond(HttpStatusCode.fromValue(428), ApiError("IF_MATCH_REQUIRED", "A valid If-Match version is required.")); return@put }
                 try {
                     val id=UUID.fromString(call.parameters["id"])
                     val request=call.receive<UpdateUserRequest>()
@@ -126,9 +126,9 @@ internal suspend fun ApplicationCall.authenticated(identity: IdentityService, si
 }
 
 private fun setRefreshCookie(call: ApplicationCall, token: String, seconds: Int) {
-    call.response.cookies.append("refresh_token", token, maxAge = seconds, httpOnly = true, secure = true, path = "/api/v1/auth", extensions = mapOf("SameSite" to "Strict"))
+    call.response.cookies.append("refresh_token", token, maxAge = seconds.toLong(), httpOnly = true, secure = true, path = "/api/v1/auth", extensions = mapOf("SameSite" to "Strict"))
 }
 
 private fun clearRefreshCookie(call: ApplicationCall) {
-    call.response.cookies.append("refresh_token", "", maxAge = 0, httpOnly = true, secure = true, path = "/api/v1/auth", extensions = mapOf("SameSite" to "Strict"))
+    call.response.cookies.append("refresh_token", "", maxAge = 0L, httpOnly = true, secure = true, path = "/api/v1/auth", extensions = mapOf("SameSite" to "Strict"))
 }

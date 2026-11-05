@@ -4,7 +4,7 @@ Kotlin monolith for mining equipment maintenance workflows. The implementation f
 
 ## Current scope
 
-Sprint 0 foundation, Sprint 1 identity/security, Sprint 2 organization/equipment/import and Sprint 3 status/history backend: Gradle multi-project, Ktor API, PostgreSQL/Flyway, hash-chained audit, login and session rotation, site-scoped roles, organization references, equipment directory and movements, configurable Excel imports, status event history and optimistic status updates, Active Problems, and a site-scoped SSE event stream. Sprint 3 still requires a green CI run and database integration validation.
+Sprint 0 foundation, Sprint 1 identity/security, Sprint 2 organization/equipment/import and Sprint 3 status/history backend: Gradle multi-project, Ktor API, PostgreSQL/Flyway, hash-chained audit, login and session rotation, site-scoped roles, organization references, equipment directory and movements, configurable Excel imports, status event history and optimistic status updates, Active Problems, and a site-scoped SSE event stream. Gradle build and database integration tests pass locally; the Sprint 3 CI run remains to be confirmed.
 
 ## Run locally
 
@@ -24,4 +24,6 @@ Authentication routes are under `/api/v1/auth`. Web refresh tokens are issued as
 
 Administrators create import profiles at `/api/v1/import-profiles`, mapping domain fields to the actual spreadsheet headers. Upload `.xlsx` files to `/api/v1/imports` as multipart fields `profileId` and `file`; inspect `/api/v1/imports/{id}`, then commit with `applyUpdates` as needed. Preview is dry-run against business tables, unknown columns are preserved, rejected rows can be downloaded as CSV, and repeat imports classify already-applied rows as unchanged. Files are limited to 20 MiB.
 
-Status updates use `POST /api/v1/equipment/{id}/status` with `If-Match` set to the equipment version and an `Idempotency-Key` header. Status history is available at `/api/v1/equipment/{id}/status-events`; active `DOWN` and `UNDER_REPAIR` equipment is listed at `/api/v1/active-problems`. Authenticated clients can subscribe to `/api/v1/events` using Server-Sent Events; `Last-Event-ID` supports resuming from the last delivered event.
+Status updates use `POST /api/v1/equipment/{id}/status` with `If-Match` set to the equipment version and an `Idempotency-Key` header. The stored statuses are `OPERATIONAL`, `UNDER_REPAIR` and `DOWN`; `OPERATIONAL_WITH_DEFECTS` is derived for display and cannot be written. Events are append-only and site-scoped, and a late event is retained in history without regressing the current equipment projection. Repeating an `Idempotency-Key` returns the original event without appending another.
+
+Status history is available at `/api/v1/equipment/{id}/status-events`; active `DOWN` and `UNDER_REPAIR` equipment is listed at `/api/v1/active-problems`, optionally filtered with `siteId`. Authenticated clients can subscribe to `/api/v1/events` using Server-Sent Events; send `Last-Event-ID` as `<recordedAt>|<eventId>` to resume after the last delivered event. Streams only include events for sites the caller may access.

@@ -57,7 +57,7 @@ fun Application.module() {
             if (cause is BadRequestException) {
                 call.respond(HttpStatusCode.BadRequest, ApiError("BAD_REQUEST", "The request is invalid."))
             } else {
-                environment.log.error("Unhandled request failure", cause)
+                call.application.environment.log.error("Unhandled request failure", cause)
                 call.respond(HttpStatusCode.InternalServerError, ApiError("INTERNAL_ERROR", "An unexpected error occurred."))
             }
         }
