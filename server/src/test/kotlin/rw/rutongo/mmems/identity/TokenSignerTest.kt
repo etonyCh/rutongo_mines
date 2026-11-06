@@ -23,7 +23,10 @@ class TokenSignerTest {
         assertNotNull(signer.verify(raw))
         assertEquals(principal.id.toString(), jwt.jwtClaimsSet.subject)
         assertEquals(900L, (jwt.jwtClaimsSet.expirationTime.time - jwt.jwtClaimsSet.issueTime.time) / 1000)
-        assertFalse(jwt.jwtClaimsSet.claims.keys.any { it.contains("site", ignoreCase = true) })
+        assertFalse(
+            jwt.jwtClaimsSet.claims.keys
+                .any { it.contains("site", ignoreCase = true) },
+        )
     }
 
     @Test

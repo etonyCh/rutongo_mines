@@ -1,7 +1,13 @@
+import kotlinx.kover.gradle.plugin.dsl.AggregationType
+import kotlinx.kover.gradle.plugin.dsl.CoverageUnit
+
 plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
     id("io.ktor.plugin")
+    id("org.jetbrains.kotlinx.kover")
+    id("org.jlleitschuh.gradle.ktlint")
+    id("io.gitlab.arturbosch.detekt")
     application
 }
 
@@ -32,9 +38,25 @@ dependencies {
     testImplementation("org.testcontainers:postgresql:1.21.4")
     testImplementation("org.testcontainers:junit-jupiter:1.21.4")
     testImplementation("io.ktor:ktor-server-test-host-jvm:3.1.3")
+    testImplementation("com.lemonappdev:konsist:0.18.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.11.4")
 }
 
 kotlin { jvmToolchain(21) }
+
+kover {
+    reports {
+        filters {
+            includes {
+                classes("rw.rutongo.mmems.modules.status.StatusService", "rw.rutongo.mmems.modules.status.domain.*")
+            }
+        }
+        verify {
+            rule("Sprint 3 status coverage") {
+                minBound(95, CoverageUnit.LINE, AggregationType.COVERED_PERCENTAGE)
+            }
+        }
+    }
+}
 
 tasks.test { useJUnitPlatform() }

@@ -1,0 +1,473 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ComplexCondition:ImportService.kt$ImportService$state == "REJECTED" || state == "UNCHANGED" || (state == "UPDATED" &amp;&amp; !applyUpdates)</ID>
+    <ID>CyclomaticComplexMethod:EquipmentRoutes.kt$fun Route.equipmentRoutes( service: EquipmentService, identity: IdentityService, signer: TokenSigner, )</ID>
+    <ID>CyclomaticComplexMethod:EquipmentService.kt$EquipmentService$fun createEquipment( actor: Principal, assetId: String, equipmentCode: String, name: String, typeId: UUID, siteId: UUID, tunnelId: UUID?, description: String?, model: String?, serialNumber: String?, manufactureYear: Int?, engineHours: java.math.BigDecimal?, requiresDailyInspection: Boolean, ): EquipmentSummary</ID>
+    <ID>CyclomaticComplexMethod:EquipmentService.kt$EquipmentService$fun createSchedule( actor: Principal, shiftCode: String, siteId: UUID?, start: LocalTime, end: LocalTime, windowMinutes: Int, backstopHours: Int, effectiveFrom: LocalDate, effectiveTo: LocalDate?, ): ShiftScheduleView</ID>
+    <ID>CyclomaticComplexMethod:EquipmentService.kt$EquipmentService$fun move( user: Principal, id: UUID, destinationSite: UUID, destinationTunnel: UUID?, reason: String, expectedVersion: Long, ): EquipmentSummary</ID>
+    <ID>CyclomaticComplexMethod:EquipmentService.kt$EquipmentService$fun updateEquipment( actor: Principal, id: UUID, expectedVersion: Long, equipmentCode: String, name: String, typeId: UUID, description: String?, model: String?, serialNumber: String?, manufactureYear: Int?, engineHours: java.math.BigDecimal?, requiresDailyInspection: Boolean, lifecycleState: String, ): EquipmentSummary</ID>
+    <ID>CyclomaticComplexMethod:EquipmentService.kt$EquipmentService$fun updateTunnel( actor: Principal, id: UUID, expectedVersion: Long, code: String, name: String, state: String, ): TunnelView</ID>
+    <ID>CyclomaticComplexMethod:IdentityRoutes.kt$fun Route.identityRoutes( identity: IdentityService, signer: TokenSigner, )</ID>
+    <ID>CyclomaticComplexMethod:IdentityService.kt$IdentityService$fun refresh( rawToken: String, clientType: String, deviceLabel: String?, ): SessionTokens?</ID>
+    <ID>CyclomaticComplexMethod:ImportRoutes.kt$fun Route.importRoutes( service: ImportService, identity: IdentityService, signer: TokenSigner, )</ID>
+    <ID>CyclomaticComplexMethod:ImportService.kt$ImportService$fun commit( actor: Principal, id: UUID, applyUpdates: Boolean, ): ImportBatchView</ID>
+    <ID>CyclomaticComplexMethod:ImportService.kt$ImportService$fun preview( actor: Principal, profileId: UUID, fileName: String, bytes: ByteArray, ): ImportBatchView</ID>
+    <ID>CyclomaticComplexMethod:ImportService.kt$ImportService$private fun validate( c: Connection, kind: ImportKind, values: Map&lt;String, String?>, ): Validation</ID>
+    <ID>CyclomaticComplexMethod:StatusRoutes.kt$fun Route.statusRoutes( service: StatusService, identity: IdentityService, signer: TokenSigner, )</ID>
+    <ID>CyclomaticComplexMethod:StatusService.kt$StatusService$fun record( actor: Principal, equipmentId: UUID, expectedVersion: Long, idempotencyKey: String, newStatus: OperationalStatus, problem: String?, actionTaken: String?, partsRequired: String?, remarks: String?, tunnelId: UUID?, shiftId: UUID?, occurredAt: Instant, ): StatusResult</ID>
+    <ID>EmptyFunctionBlock:ImportService.kt$ImportService.&lt;no name provided>${ }</ID>
+    <ID>InstanceOfCheckForException:IdentityService.kt$IdentityService$e is SQLException</ID>
+    <ID>LargeClass:EquipmentService.kt$EquipmentService</ID>
+    <ID>LongMethod:EquipmentRoutes.kt$fun Route.equipmentRoutes( service: EquipmentService, identity: IdentityService, signer: TokenSigner, )</ID>
+    <ID>LongMethod:EquipmentService.kt$EquipmentService$fun move( user: Principal, id: UUID, destinationSite: UUID, destinationTunnel: UUID?, reason: String, expectedVersion: Long, ): EquipmentSummary</ID>
+    <ID>LongMethod:IdentityFlowTest.kt$IdentityFlowTest$@Test fun `bootstrap login password change site scope and refresh replay protection`()</ID>
+    <ID>LongMethod:IdentityRoutes.kt$fun Route.identityRoutes( identity: IdentityService, signer: TokenSigner, )</ID>
+    <ID>LongMethod:ImportIdempotencyTest.kt$ImportIdempotencyTest$@Test fun `preview commit and repeated import are idempotent without writing operational status`()</ID>
+    <ID>LongMethod:ImportRoutes.kt$fun Route.importRoutes( service: ImportService, identity: IdentityService, signer: TokenSigner, )</ID>
+    <ID>LongMethod:ImportService.kt$ImportService$fun preview( actor: Principal, profileId: UUID, fileName: String, bytes: ByteArray, ): ImportBatchView</ID>
+    <ID>LongMethod:ImportService.kt$ImportService$private fun upsert( c: Connection, kind: ImportKind, row: PersistedRow, hash: String?, )</ID>
+    <ID>LongMethod:StatusRoutes.kt$fun Route.statusRoutes( service: StatusService, identity: IdentityService, signer: TokenSigner, )</ID>
+    <ID>LongMethod:StatusService.kt$StatusService$fun record( actor: Principal, equipmentId: UUID, expectedVersion: Long, idempotencyKey: String, newStatus: OperationalStatus, problem: String?, actionTaken: String?, partsRequired: String?, remarks: String?, tunnelId: UUID?, shiftId: UUID?, occurredAt: Instant, ): StatusResult</ID>
+    <ID>LongParameterList:EquipmentService.kt$EquipmentService$( actor: Principal, assetId: String, equipmentCode: String, name: String, typeId: UUID, siteId: UUID, tunnelId: UUID?, description: String?, model: String?, serialNumber: String?, manufactureYear: Int?, engineHours: java.math.BigDecimal?, requiresDailyInspection: Boolean, )</ID>
+    <ID>LongParameterList:EquipmentService.kt$EquipmentService$( actor: Principal, id: UUID, expectedVersion: Long, code: String, name: String, state: String, )</ID>
+    <ID>LongParameterList:EquipmentService.kt$EquipmentService$( actor: Principal, id: UUID, expectedVersion: Long, equipmentCode: String, name: String, typeId: UUID, description: String?, model: String?, serialNumber: String?, manufactureYear: Int?, engineHours: java.math.BigDecimal?, requiresDailyInspection: Boolean, lifecycleState: String, )</ID>
+    <ID>LongParameterList:EquipmentService.kt$EquipmentService$( actor: Principal, id: UUID, expectedVersion: Long, name: String, timezone: String, state: String, )</ID>
+    <ID>LongParameterList:EquipmentService.kt$EquipmentService$( actor: Principal, shiftCode: String, siteId: UUID?, start: LocalTime, end: LocalTime, windowMinutes: Int, backstopHours: Int, effectiveFrom: LocalDate, effectiveTo: LocalDate?, )</ID>
+    <ID>LongParameterList:EquipmentService.kt$EquipmentService$( c: Connection, actor: UUID, action: String, type: String, id: UUID, metadata: String, )</ID>
+    <ID>LongParameterList:EquipmentService.kt$EquipmentService$( user: Principal, id: UUID, destinationSite: UUID, destinationTunnel: UUID?, reason: String, expectedVersion: Long, )</ID>
+    <ID>LongParameterList:IdentityService.kt$IdentityService$( actorId: UUID, id: UUID, expectedVersion: Long, fullName: String, employeeId: String, role: Role, siteIds: List&lt;UUID>, )</ID>
+    <ID>LongParameterList:IdentityService.kt$IdentityService$( actorId: UUID, username: String, fullName: String, employeeId: String, role: Role, password: CharArray, siteIds: List&lt;UUID>, )</ID>
+    <ID>LongParameterList:IdentityService.kt$IdentityService$( c: Connection, actor: UUID?, action: String, type: String, entityId: String, metadata: String, )</ID>
+    <ID>LongParameterList:ImportService.kt$ImportService$( c: Connection, actor: UUID, action: String, batchId: UUID, sha: String, counts: Counts, )</ID>
+    <ID>LongParameterList:StatusService.kt$StatusService$( actor: Principal, equipmentId: UUID, expectedVersion: Long, idempotencyKey: String, newStatus: OperationalStatus, problem: String?, actionTaken: String?, partsRequired: String?, remarks: String?, tunnelId: UUID?, shiftId: UUID?, occurredAt: Instant, )</ID>
+    <ID>LoopWithTooManyJumpStatements:ImportRoutes.kt$while</ID>
+    <ID>LoopWithTooManyJumpStatements:ImportService.kt$ImportService$while</ID>
+    <ID>MagicNumber:Application.kt$10</ID>
+    <ID>MagicNumber:EquipmentRoutes.kt$100</ID>
+    <ID>MagicNumber:EquipmentRoutes.kt$428</ID>
+    <ID>MagicNumber:EquipmentService.kt$EquipmentService$10</ID>
+    <ID>MagicNumber:EquipmentService.kt$EquipmentService$11</ID>
+    <ID>MagicNumber:EquipmentService.kt$EquipmentService$12</ID>
+    <ID>MagicNumber:EquipmentService.kt$EquipmentService$13</ID>
+    <ID>MagicNumber:EquipmentService.kt$EquipmentService$1440</ID>
+    <ID>MagicNumber:EquipmentService.kt$EquipmentService$168</ID>
+    <ID>MagicNumber:EquipmentService.kt$EquipmentService$1900</ID>
+    <ID>MagicNumber:EquipmentService.kt$EquipmentService$200</ID>
+    <ID>MagicNumber:EquipmentService.kt$EquipmentService$2200</ID>
+    <ID>MagicNumber:EquipmentService.kt$EquipmentService$3</ID>
+    <ID>MagicNumber:EquipmentService.kt$EquipmentService$4</ID>
+    <ID>MagicNumber:EquipmentService.kt$EquipmentService$5</ID>
+    <ID>MagicNumber:EquipmentService.kt$EquipmentService$6</ID>
+    <ID>MagicNumber:EquipmentService.kt$EquipmentService$7</ID>
+    <ID>MagicNumber:EquipmentService.kt$EquipmentService$8</ID>
+    <ID>MagicNumber:EquipmentService.kt$EquipmentService$9</ID>
+    <ID>MagicNumber:IdentityRoutes.kt$100</ID>
+    <ID>MagicNumber:IdentityRoutes.kt$428</ID>
+    <ID>MagicNumber:IdentityRoutes.kt$60</ID>
+    <ID>MagicNumber:IdentityRoutes.kt$8</ID>
+    <ID>MagicNumber:IdentityService.kt$IdentityService$10</ID>
+    <ID>MagicNumber:IdentityService.kt$IdentityService$120</ID>
+    <ID>MagicNumber:IdentityService.kt$IdentityService$24</ID>
+    <ID>MagicNumber:IdentityService.kt$IdentityService$3</ID>
+    <ID>MagicNumber:IdentityService.kt$IdentityService$30L</ID>
+    <ID>MagicNumber:IdentityService.kt$IdentityService$3600</ID>
+    <ID>MagicNumber:IdentityService.kt$IdentityService$4</ID>
+    <ID>MagicNumber:IdentityService.kt$IdentityService$48</ID>
+    <ID>MagicNumber:IdentityService.kt$IdentityService$5</ID>
+    <ID>MagicNumber:IdentityService.kt$IdentityService$500</ID>
+    <ID>MagicNumber:IdentityService.kt$IdentityService$6</ID>
+    <ID>MagicNumber:IdentityService.kt$IdentityService$65536</ID>
+    <ID>MagicNumber:IdentityService.kt$IdentityService$7</ID>
+    <ID>MagicNumber:IdentityService.kt$IdentityService$8</ID>
+    <ID>MagicNumber:IdentityService.kt$IdentityService$8L</ID>
+    <ID>MagicNumber:IdentityService.kt$IdentityService$900</ID>
+    <ID>MagicNumber:IdentityService.kt$TokenSigner$900</ID>
+    <ID>MagicNumber:IdentityService.kt$TokenSigner.Companion$2048</ID>
+    <ID>MagicNumber:ImportRoutes.kt$100</ID>
+    <ID>MagicNumber:ImportRoutes.kt$1024L</ID>
+    <ID>MagicNumber:ImportRoutes.kt$8192</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$0.01</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$10</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$1024</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$11</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$12</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$13</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$14</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$1900</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$20L</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$2200</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$255</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$3</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$4</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$5</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$500</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$50L</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$6</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$7</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$8</ID>
+    <ID>MagicNumber:ImportService.kt$ImportService$9</ID>
+    <ID>MagicNumber:StatusRoutes.kt$100</ID>
+    <ID>MagicNumber:StatusRoutes.kt$20_000</ID>
+    <ID>MagicNumber:StatusRoutes.kt$428</ID>
+    <ID>MagicNumber:StatusService.kt$StatusService$10</ID>
+    <ID>MagicNumber:StatusService.kt$StatusService$11</ID>
+    <ID>MagicNumber:StatusService.kt$StatusService$12</ID>
+    <ID>MagicNumber:StatusService.kt$StatusService$13</ID>
+    <ID>MagicNumber:StatusService.kt$StatusService$14</ID>
+    <ID>MagicNumber:StatusService.kt$StatusService$15</ID>
+    <ID>MagicNumber:StatusService.kt$StatusService$16</ID>
+    <ID>MagicNumber:StatusService.kt$StatusService$200</ID>
+    <ID>MagicNumber:StatusService.kt$StatusService$3</ID>
+    <ID>MagicNumber:StatusService.kt$StatusService$4</ID>
+    <ID>MagicNumber:StatusService.kt$StatusService$5</ID>
+    <ID>MagicNumber:StatusService.kt$StatusService$6</ID>
+    <ID>MagicNumber:StatusService.kt$StatusService$7</ID>
+    <ID>MagicNumber:StatusService.kt$StatusService$8</ID>
+    <ID>MagicNumber:StatusService.kt$StatusService$9</ID>
+    <ID>MatchingDeclarationName:Application.kt$ApiError</ID>
+    <ID>MaxLineLength:Application.kt$IdentityService(dataSource, TokenSigner.fromEnvironment()).bootstrapAdmin(username, fullName, employeeId, password.toCharArray())</ID>
+    <ID>MaxLineLength:Application.kt$call.respond(HttpStatusCode.InternalServerError, ApiError("INTERNAL_ERROR", "An unexpected error occurred."))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$"FORBIDDEN", "SOURCE_SITE_NOT_AUTHORIZED", "DESTINATION_SITE_NOT_AUTHORIZED" -> HttpStatusCode.Forbidden</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_EQUIPMENT", e.message ?: "The equipment details are invalid."))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_EQUIPMENT_ID", "The equipment ID is invalid."))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_EQUIPMENT_TYPE", e.message ?: "The equipment type is invalid."))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_MOVEMENT", e.message ?: "The movement details are invalid."))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_SHIFT_SCHEDULE", e.message ?: "The shift schedule is invalid."))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_TUNNEL", e.message ?: "The tunnel is invalid."))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(HttpStatusCode.Created, service.createEquipmentType(user, call.receive&lt;CreateTypeRequest>().name))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(HttpStatusCode.Created, service.createSchedule(user, body.shiftCode, body.siteId?.let(UUID::fromString), LocalTime.parse(body.startLocal), LocalTime.parse(body.endLocal), body.inspectionWindowMinutes, body.hardBackstopHours, LocalDate.parse(body.effectiveFrom), body.effectiveTo?.let(LocalDate::parse)))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(HttpStatusCode.Created, service.createTunnel(user, UUID.fromString(body.siteId), body.code, body.name))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(HttpStatusCode.Forbidden, ApiError("FORBIDDEN", "Only an Administrator can configure shifts."))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(HttpStatusCode.Forbidden, ApiError("FORBIDDEN", "Only an Administrator can create equipment."))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(HttpStatusCode.Forbidden, ApiError("FORBIDDEN", "Only an Administrator can create tunnels."))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(HttpStatusCode.Forbidden, ApiError("FORBIDDEN", "Only an Administrator can manage equipment types."))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(HttpStatusCode.Forbidden, ApiError("FORBIDDEN", "Only an Administrator can update equipment."))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(HttpStatusCode.Forbidden, ApiError("FORBIDDEN", "Only an Administrator can update shifts."))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(HttpStatusCode.Forbidden, ApiError("FORBIDDEN", "Only an Administrator can update tunnels."))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(HttpStatusCode.Forbidden, ApiError("FORBIDDEN", "This role cannot view the personnel directory."))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(HttpStatusCode.fromValue(428), ApiError("IF_MATCH_REQUIRED", "A valid If-Match version is required."))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(service.equipment(user, siteId, call.request.queryParameters["q"], call.request.queryParameters["limit"]?.toIntOrNull() ?: 100))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(service.updateEquipment(user, id, expected, body.equipmentCode, body.name, UUID.fromString(body.typeId), body.description, body.model, body.serialNumber, body.manufactureYear, body.engineHoursCurrent?.let(::BigDecimal), body.requiresDailyInspection, body.lifecycleState))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(service.updateShift(user.id, call.parameters["code"] ?: "", expected, call.receive&lt;UpdateShiftRequest>().name))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(service.updateSite(user, UUID.fromString(call.parameters["id"]), expected, body.name, body.timezone, body.state))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$call.respond(service.updateTunnel(user, UUID.fromString(call.parameters["id"]), expected, body.code, body.name, body.state))</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$if (equipment == null) call.respond(HttpStatusCode.NotFound, ApiError("EQUIPMENT_NOT_FOUND", "The equipment was not found.")) else call.respond(equipment)</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$val created = service.createEquipment(user, body.assetId, body.equipmentCode, body.name, UUID.fromString(body.typeId), UUID.fromString(body.siteId), body.tunnelId?.let(UUID::fromString), body.description, body.model, body.serialNumber, body.manufactureYear, body.engineHoursCurrent?.let(::BigDecimal), body.requiresDailyInspection)</ID>
+    <ID>MaxLineLength:EquipmentRoutes.kt$val moved = service.move(user, id, UUID.fromString(body.destinationSiteId), body.destinationTunnelId?.let(UUID::fromString), body.reason, expected)</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$)</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$SiteView(rs.getObject(1, UUID::class.java).toString(), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getLong(6))</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$c.prepareStatement("insert into audit_event(actor_id,action,entity_type,entity_id,occurred_at,metadata,event_hash) values (?,?,'equipment',?,now(),?::jsonb,?)")</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$c.prepareStatement("insert into audit_event(actor_id,action,entity_type,entity_id,occurred_at,metadata,event_hash) values (?,?,?, ?,now(),?::jsonb,?)")</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$c.prepareStatement("insert into equipment(id,asset_id,equipment_code,name,type_id,site_id,tunnel_id,description,model,serial_number,manufacture_year,engine_hours_current,requires_daily_inspection) values (?,?,?,?,?,?,?,?,?,?,?,?,?)")</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$c.prepareStatement("insert into equipment_movement(equipment_id,from_site_id,from_tunnel_id,to_site_id,to_tunnel_id,moved_at,user_id,reason) values (?,?,?,?,?,now(),?,?)")</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$c.prepareStatement("insert into shift_schedule(id,shift_id,site_id,start_local,end_local,inspection_window_minutes,hard_backstop_hours,effective_from,effective_to) values (?,?,?,?,?,?,?,?,?)")</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$c.prepareStatement("insert into site(id,code,name,state,timezone) values (?,?,?,'ACTIVE',?)")</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$c.prepareStatement("insert into tunnel(id,site_id,code,name,state) values (?,?,?,?,'ACTIVE')")</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$c.prepareStatement("insert into user_site_access(user_id,site_id) select ?,? where exists(select 1 from user_site_access where user_id=?)")</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$c.prepareStatement("select id,code,name,version from shift order by code").use { ps -> ps.executeQuery().use { rs -> buildList { while (rs.next()) add(ShiftView(rs.getObject("id", UUID::class.java).toString(), rs.getString("code"), rs.getString("name"), rs.getLong("version"))) } } }</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$c.prepareStatement("select p.id,p.$key employee_id,p.name,p.site_id,p.tunnel_id,p.shift_id,p.active from $table p where p.site_id is null or exists(select 1 from user_site_access a where a.user_id=? and a.site_id=p.site_id) or (? and not exists(select 1 from user_site_access a where a.user_id=?)) order by p.name")</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$c.prepareStatement("select site_id,tunnel_id,version from equipment where id=? for update")</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$c.prepareStatement("update equipment set equipment_code=?,name=?,type_id=?,description=?,model=?,serial_number=?,manufacture_year=?,engine_hours_current=?,requires_daily_inspection=?,lifecycle_state=?,updated_at=now(),version=version+1 where id=? and version=?")</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$c.prepareStatement("update equipment set site_id=?,tunnel_id=?,updated_at=now(),version=version+1 where id=? and version=?")</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$c.prepareStatement("update site set name=?,timezone=?,state=?,updated_at=now(),version=version+1 where id=? and version=?")</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$c.prepareStatement("update tunnel set code=?,name=?,state=?,version=version+1 where id=? and version=?")</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$fun equipmentTypes(): List&lt;EquipmentTypeView></ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$if (current.first == destinationSite &amp;&amp; current.second == destinationTunnel) throw AuthFailure("EQUIPMENT_LOCATION_UNCHANGED")</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$if (destinationTunnel != null &amp;&amp; !activeTunnel(c, destinationTunnel, destinationSite)) throw AuthFailure("TUNNEL_NOT_IN_SITE")</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$private fun ResultSet.toSummary()</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$ps.executeQuery().use { rs -> buildList { while (rs.next()) add(PersonnelView(rs.getObject("id", UUID::class.java).toString(), rs.getString("employee_id"), rs.getString("name"), rs.getObject("site_id", UUID::class.java)?.toString(), rs.getObject("tunnel_id", UUID::class.java)?.toString(), rs.getObject("shift_id", UUID::class.java)?.toString(), rs.getBoolean("active"))) } }</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$ps.executeQuery().use { rs -> buildList { while (rs.next()) add(ShiftScheduleView(rs.getObject("id", UUID::class.java).toString(), rs.getObject("shift_id", UUID::class.java).toString(), rs.getString("shift_code"), rs.getObject("site_id", UUID::class.java)?.toString(), rs.getString("start_local"), rs.getString("end_local"), rs.getInt("inspection_window_minutes"), rs.getInt("hard_backstop_hours"), rs.getString("effective_from"), rs.getString("effective_to"))) } }</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$ps.executeQuery().use { rs -> buildList { while (rs.next()) add(SiteView(rs.getObject("id", UUID::class.java).toString(), rs.getString("code"), rs.getString("name"), rs.getString("state"), rs.getString("timezone"), rs.getLong("version"))) } }</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$ps.executeQuery().use { rs -> buildList { while (rs.next()) add(TunnelView(rs.getObject("id", UUID::class.java).toString(), rs.getObject("site_id", UUID::class.java).toString(), rs.getString("code"), rs.getString("name"), rs.getString("state"), rs.getLong("version"))) } }</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$ps.executeQuery().use { rs -> if (rs.next()) SiteView(rs.getObject(1, UUID::class.java).toString(), rs.getString(2), rs.getString(3), rs.getString(4), rs.getString(5), rs.getLong(6)) else throw AuthFailure("SITE_NOT_FOUND") }</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$ps.executeQuery().use { rs -> if (rs.next()) Triple(rs.getObject(1, UUID::class.java), rs.getObject(2, UUID::class.java), rs.getLong(3)) else throw AuthFailure("EQUIPMENT_NOT_FOUND") }</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$ps.executeQuery().use { rs -> if (rs.next()) TunnelView(id.toString(), rs.getObject(1, UUID::class.java).toString(), rs.getString(2), rs.getString(3), rs.getString(4), rs.getLong(5)) else throw AuthFailure("TUNNEL_NOT_FOUND") }</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$ps.executeQuery().use { rs -> if (rs.next()) rs.getObject(1, UUID::class.java) else throw AuthFailure("SHIFT_NOT_FOUND") }</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$ps.executeQuery().use { rs -> if (rs.next()) rs.getObject(1, UUID::class.java) else throw AuthFailure("TUNNEL_NOT_FOUND") }</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$ps.executeQuery().use { rs -> if (rs.next()) rs.getObject(1, UUID::class.java) to rs.getLong(2) else throw AuthFailure("EQUIPMENT_NOT_FOUND") }</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$require(assetId.isNotBlank() &amp;&amp; equipmentCode.isNotBlank() &amp;&amp; name.isNotBlank()) { "Asset ID, equipment code and name are required" }</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$require(effectiveTo == null || !effectiveTo.isBefore(effectiveFrom)) { "effectiveTo must not precede effectiveFrom" }</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$require(manufactureYear == null || manufactureYear in 1900..2200) { "Manufacture year is outside the supported range" }</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$require(windowMinutes in 1..1440 &amp;&amp; backstopHours in 1..168) { "Shift window and backstop are outside supported limits" }</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$return ShiftScheduleView(id.toString(), shiftId.toString(), shiftCode.uppercase(), siteId?.toString(), start.toString(), end.toString(), windowMinutes, backstopHours, effectiveFrom.toString(), effectiveTo?.toString())</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$writeAudit(c, actor.id, "EQUIPMENT_UPDATED", "equipment", id, "{\"siteId\":\"${currentSite.first}\",\"lifecycleState\":\"$lifecycleState\"}")</ID>
+    <ID>MaxLineLength:EquipmentService.kt$EquipmentService$writeAudit(c, actor.id, "SHIFT_SCHEDULE_CREATED", "shift_schedule", id, "{\"shift\":\"$shiftCode\",\"siteId\":${siteId?.let { "\"$it\"" } ?: "null"}}")</ID>
+    <ID>MaxLineLength:FoundationMigrationTest.kt$FoundationMigrationTest$c.createStatement().use { it.executeUpdate("update audit_event set action='TAMPERED' where action='TEST_ONE'") }</ID>
+    <ID>MaxLineLength:FoundationMigrationTest.kt$FoundationMigrationTest$statement.executeQuery("select previous_hash,event_hash from audit_event where action in ('TEST_ONE','TEST_TWO') order by audit_sequence")</ID>
+    <ID>MaxLineLength:FoundationMigrationTest.kt$FoundationMigrationTest$statement.executeUpdate("insert into audit_event(action,entity_type,entity_id,occurred_at,metadata,event_hash) values ('TEST_ONE','test','1',now(),'{}',decode('00','hex'))")</ID>
+    <ID>MaxLineLength:FoundationMigrationTest.kt$FoundationMigrationTest$statement.executeUpdate("insert into audit_event(action,entity_type,entity_id,occurred_at,metadata,event_hash) values ('TEST_TWO','test','2',now(),'{}',decode('00','hex'))")</ID>
+    <ID>MaxLineLength:IdentityFlowTest.kt$IdentityFlowTest$identity.bootstrapAdmin("admin-2", "Second Admin", "EID-ADMIN-2", "AnotherCorrectPassword1".toCharArray())</ID>
+    <ID>MaxLineLength:IdentityFlowTest.kt$IdentityFlowTest$val mechanic = identity.createUser(adminId, "mechanic", "Rutongo Mechanic", "EID-MECH", Role.MECHANIC, "MechanicPassword1".toCharArray(), listOf(firstSite))</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_USER", e.message ?: "The user details are invalid."))</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$call.respond(HttpStatusCode.BadRequest, ApiError("PASSWORD_POLICY", e.message ?: "The password does not meet policy."))</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$call.respond(HttpStatusCode.Forbidden, ApiError("CSRF_REJECTED", "The request could not be verified."))</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$call.respond(HttpStatusCode.Forbidden, ApiError("FORBIDDEN", "You are not allowed to manage users."))</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$call.respond(HttpStatusCode.Forbidden, ApiError("FORBIDDEN", "You are not allowed to view audit events."))</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$call.respond(HttpStatusCode.TooManyRequests, ApiError("RATE_LIMITED", "Please wait before trying again."))</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$call.respond(HttpStatusCode.Unauthorized, ApiError("INVALID_CREDENTIALS", "Username or password is incorrect."))</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$call.respond(HttpStatusCode.Unauthorized, ApiError("INVALID_REFRESH_TOKEN", "The session is invalid or expired."))</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$call.respond(HttpStatusCode.fromValue(428), ApiError("IF_MATCH_REQUIRED", "A valid If-Match version is required."))</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$call.respond(SessionResponse(session.accessToken, if (web) null else session.refreshToken, expiresIn = session.expiresIn, mustChangePassword = session.mustChangePassword))</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$call.respond(identity.updateUser(principal.id, id, expectedVersion, request.fullName, request.employeeId, request.role, request.siteIds.map(UUID::fromString)))</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$call.response.cookies.append("refresh_token", "", maxAge = 0L, httpOnly = true, secure = true, path = "/api/v1/auth", extensions = mapOf("SameSite" to "Strict"))</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$call.response.cookies.append("refresh_token", token, maxAge = seconds.toLong(), httpOnly = true, secure = true, path = "/api/v1/auth", extensions = mapOf("SameSite" to "Strict"))</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$identity.changePassword(principal, request.currentPassword.toCharArray(), request.newPassword.toCharArray())</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$if</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$if (me == null) call.respond(HttpStatusCode.Unauthorized, ApiError("UNAUTHENTICATED", "Authentication is required.")) else call.respond(me)</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$respond(HttpStatusCode.Forbidden, ApiError("PASSWORD_CHANGE_REQUIRED", "Change your password before continuing."))</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$val bearer = request.headers[HttpHeaders.Authorization]?.takeIf { it.startsWith("Bearer ", true) }?.substringAfter(' ')</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$val created = identity.createUser(principal.id, request.username, request.fullName, request.employeeId, request.role, request.initialPassword.toCharArray(), request.siteIds.map(UUID::fromString))</ID>
+    <ID>MaxLineLength:IdentityRoutes.kt$val session = identity.login(request.username, request.password.toCharArray(), request.clientType.uppercase(), request.deviceLabel)</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$"select exists(select 1 from site s join user_site_access usa on usa.site_id=s.id where s.id=? and s.state='ACTIVE' and usa.user_id=?)"</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$"select exists(select 1 from site s where s.id=? and s.state='ACTIVE' and (not exists(select 1 from user_site_access where user_id=?) or exists(select 1 from user_site_access where user_id=? and site_id=s.id)))"</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$UserView(id.toString(), rs.getString("username"), rs.getString("full_name"), rs.getString("employee_id"), Role.valueOf(rs.getString("role")), rs.getBoolean("active"), sites, rs.getLong("version"))</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$appendAudit(c, actorId, if (active) "USER_ACTIVATED" else "USER_DEACTIVATED", "app_user", id.toString(), "{}")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$c.prepareStatement("insert into app_user(id,username,full_name,employee_id,role,password_hash,must_change_password) values (?,?,?,?,'ADMINISTRATOR',?,true)")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$c.prepareStatement("insert into app_user(id,username,full_name,employee_id,role,password_hash,must_change_password) values (?,?,?,?,?,?,true)")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$c.prepareStatement("insert into audit_event(actor_id,action,entity_type,entity_id,occurred_at,metadata,event_hash) values (?,?,'app_user',?,now(),?::jsonb,?)")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$c.prepareStatement("insert into audit_event(actor_id,action,entity_type,entity_id,occurred_at,metadata,event_hash) values (?,?,?,?,now(),?::jsonb,?)")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$c.prepareStatement("insert into login_rate_bucket(bucket_key,window_started_at,attempts) values (?,now(),1) on conflict(bucket_key) do update set attempts=case when login_rate_bucket.window_started_at &lt; now()-interval '1 minute' then 1 else login_rate_bucket.attempts+1 end, window_started_at=case when login_rate_bucket.window_started_at &lt; now()-interval '1 minute' then now() else login_rate_bucket.window_started_at end returning attempts")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$c.prepareStatement("insert into refresh_token(id,user_id,token_hash,family_id,issued_at,expires_at,device_label,client_type) values (?,?,?,?,?,?,?,?)")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$c.prepareStatement("select actor_id,action,entity_type,entity_id,occurred_at,metadata,encode(previous_hash,'hex') previous_hash,encode(event_hash,'hex') event_hash from audit_event order by occurred_at desc,id desc limit ?")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$c.prepareStatement("select id from app_user order by username").use { ps -> ps.executeQuery().use { rs -> buildList { while (rs.next()) loadUser(c, rs.getObject(1, UUID::class.java))?.let(::add) } } }</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$c.prepareStatement("select id from app_user where role='ADMINISTRATOR' for update").use { ps -> ps.executeQuery().use { if (it.next()) throw AuthFailure("ADMIN_ALREADY_EXISTS") } }</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$c.prepareStatement("select id,username,full_name,employee_id,role,active,version from app_user where id=?")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$c.prepareStatement("select site_id from user_site_access where user_id=? order by site_id")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$c.prepareStatement("update app_user set failed_attempts=failed_attempts+1,locked_until=case when failed_attempts+1>=5 then now()+make_interval(secs=>least(3600,power(2,least(failed_attempts+1-5,10))::integer)) else null end where id=?")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$c.prepareStatement("update app_user set full_name=?,employee_id=?,role=?,updated_at=now(),version=version+1 where id=? and version=?")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$c.prepareStatement("update app_user set password_hash=?,must_change_password=false,updated_at=now(),version=version+1 where id=?")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$c.prepareStatement("update refresh_token set revoked_at=now() where token_hash=? and revoked_at is null")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$c.prepareStatement("update refresh_token set revoked_at=now() where user_id=? and revoked_at is null")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$connection.prepareStatement("select id, username, role, password_hash, active, must_change_password, locked_until from app_user where username = ?")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$connection.prepareStatement("select id,user_id,family_id,expires_at,used_at,revoked_at,client_type from refresh_token where token_hash=? for update")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$connection.prepareStatement("update app_user set failed_attempts=0, locked_until=null, last_login_at=now() where id=?")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$connection.prepareStatement("update refresh_token set revoked_at=now() where family_id=? and revoked_at is null")</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$if</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$ps.executeQuery().use { rs -> if (rs.next() &amp;&amp; rs.getBoolean("active")) Principal(id, rs.getString("username"), Role.valueOf(rs.getString("role")), rs.getBoolean("must_change_password")) else null }</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$ps.executeQuery().use { rs -> if (rs.next()) RefreshRecord(rs.getObject("id", UUID::class.java), rs.getObject("user_id", UUID::class.java), rs.getObject("family_id", UUID::class.java), rs.getTimestamp("expires_at").toInstant(), rs.getTimestamp("used_at")?.toInstant(), rs.getTimestamp("revoked_at")?.toInstant(), rs.getString("client_type")) else null }</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$ps.executeQuery().use { rs -> if (rs.next()) rs.getString(1) else throw AuthFailure("INVALID_CREDENTIALS") }</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$require(fullName.isNotBlank() &amp;&amp; employeeId.isNotBlank() &amp;&amp; siteIds.isNotEmpty()) { "Name, employee ID and authorized sites are required" }</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$s.executeQuery().use { rows -> buildList { while (rows.next()) add(rows.getObject(1, UUID::class.java).toString()) } }</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$val opaque = Base64.getUrlEncoder().withoutPadding().encodeToString(ByteArray(48).also(java.security.SecureRandom()::nextBytes))</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService$while (rs.next()) add(mapOf("actorId" to rs.getString("actor_id"), "action" to rs.getString("action"), "entityType" to rs.getString("entity_type"), "entityId" to rs.getString("entity_id"), "occurredAt" to rs.getString("occurred_at"), "metadata" to rs.getString("metadata"), "previousHash" to rs.getString("previous_hash"), "eventHash" to rs.getString("event_hash")))</ID>
+    <ID>MaxLineLength:IdentityService.kt$IdentityService.Companion$private val COMMON_PASSWORDS = setOf("password123", "1234567890", "qwerty1234", "rutongo123", "password1234", "admin123456", "letmein1234", "welcome1234", "iloveyou123", "123456789a", "qwertyuiop", "changeme123", "administrator")</ID>
+    <ID>MaxLineLength:IdentityService.kt$RolePermissions$Role.ADMINISTRATOR to setOf("EQUIPMENT_VIEW", "USER_MANAGE", "CONFIG_MANAGE", "IMPORT_RUN", "CHECKLIST_MANAGE", "AUDIT_VIEW")</ID>
+    <ID>MaxLineLength:IdentityService.kt$RolePermissions$Role.MANAGER to setOf("EQUIPMENT_VIEW", "PART_APPROVE", "STATUS_OVERRIDE", "INSPECTION_REVIEW", "REPORT_APPROVE", "REPORT_VIEW_APPROVED", "COST_VIEW", "AUDIT_VIEW")</ID>
+    <ID>MaxLineLength:IdentityService.kt$RolePermissions$Role.MECHANIC to setOf("EQUIPMENT_VIEW", "INSPECTION_SUBMIT", "STATUS_UPDATE", "BREAKDOWN_MANAGE", "MAINTENANCE_RECORD", "PART_REQUEST", "REPORT_VIEW_OWN_SITE")</ID>
+    <ID>MaxLineLength:IdentityService.kt$RolePermissions$Role.SUPERVISOR to setOf("EQUIPMENT_VIEW", "STATUS_UPDATE", "BREAKDOWN_MANAGE", "MAINTENANCE_RECORD", "MAINTENANCE_VERIFY", "PART_REQUEST", "PART_APPROVE", "REPORT_PREPARE", "REPORT_VIEW_OWN_SITE")</ID>
+    <ID>MaxLineLength:IdentityService.kt$TokenSigner$Principal(UUID.fromString(claims.subject), claims.getStringClaim("username"), Role.valueOf(claims.getStringClaim("role")), claims.getBooleanClaim("mustChangePassword"))</ID>
+    <ID>MaxLineLength:IdentityService.kt$TokenSigner.Companion$KeyPair(factory.generatePublic(X509EncodedKeySpec(publicBytes)), factory.generatePrivate(PKCS8EncodedKeySpec(privateBytes)))</ID>
+    <ID>MaxLineLength:IdentityService.kt$TokenSigner.Companion$require(System.getenv("APP_ENV") != "production") { "JWT_PRIVATE_KEY_B64 and JWT_PUBLIC_KEY_B64 are required in production" }</ID>
+    <ID>MaxLineLength:ImmutabilityTest.kt$ImmutabilityTest$c.prepareStatement("insert into app_user(id,username,full_name,employee_id,role,password_hash) values (?,?,?,?,?,'not-used')")</ID>
+    <ID>MaxLineLength:ImmutabilityTest.kt$ImmutabilityTest$c.prepareStatement("insert into equipment(id,asset_id,equipment_code,name,type_id,site_id) values (?,?,?,?,?,?)")</ID>
+    <ID>MaxLineLength:ImmutabilityTest.kt$ImmutabilityTest$c.prepareStatement("update equipment_status_event set new_status='OPERATIONAL' where id=?")</ID>
+    <ID>MaxLineLength:ImmutabilityTest.kt$ImmutabilityTest$val event = service.record(actor, equipment, 0, "immutable-${UUID.randomUUID()}", OperationalStatus.DOWN, "Hydraulic leak", null, null, null, null, null, Instant.parse("2026-11-05T08:00:00Z")).event</ID>
+    <ID>MaxLineLength:ImportIdempotencyTest.kt$ImportIdempotencyTest$listOf("ASSET-001", "EQ-001", "Underground Forklift", "Forklift", "Nyamyumba", "F-100", "Preserve me").forEachIndexed { column, value -> row.createCell(column).setCellValue(value) }</ID>
+    <ID>MaxLineLength:ImportIdempotencyTest.kt$ImportIdempotencyTest$statement.executeQuery("select count(*),min(current_status) from equipment where asset_id='ASSET-001'")</ID>
+    <ID>MaxLineLength:ImportRoutes.kt$call.respond(HttpStatusCode.BadRequest, ApiError("IMPORT_FILE_REQUIRED", "Provide profileId and an .xlsx file."))</ID>
+    <ID>MaxLineLength:ImportRoutes.kt$call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_IMPORT_PROFILE", e.message ?: "The import profile is invalid."))</ID>
+    <ID>MaxLineLength:ImportRoutes.kt$call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_WORKBOOK", e.message ?: "The workbook could not be read."))</ID>
+    <ID>MaxLineLength:ImportRoutes.kt$call.respond(HttpStatusCode.Created, service.createProfile(user.id, request.name, request.kind, request.sheetName, request.columnMapping))</ID>
+    <ID>MaxLineLength:ImportRoutes.kt$call.respond(HttpStatusCode.Forbidden, ApiError("FORBIDDEN", "You are not allowed to export rejected import rows."))</ID>
+    <ID>MaxLineLength:ImportRoutes.kt$call.respond(HttpStatusCode.Forbidden, ApiError("FORBIDDEN", "You are not allowed to manage import profiles."))</ID>
+    <ID>MaxLineLength:ImportRoutes.kt$call.respond(service.rows(id, call.request.queryParameters["from"]?.toIntOrNull() ?: 1, call.request.queryParameters["limit"]?.toIntOrNull() ?: 100))</ID>
+    <ID>MaxLineLength:ImportRoutes.kt$if</ID>
+    <ID>MaxLineLength:ImportRoutes.kt$is PartData.FormItem -> if (part.name == "profileId") profileId = runCatching { UUID.fromString(part.value) }.getOrNull()</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$)</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$ImportBatchView(rs.getObject(1, UUID::class.java).toString(), rs.getString(2), rs.getString(3), rs.getInt(4), rs.getInt(5), rs.getInt(6), rs.getInt(7), types)</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("""insert into operator(employee_id,name,site_id,tunnel_id,shift_id,extra,import_row_hash) values (?,?,?,?,?,?::jsonb,?) on conflict(employee_id) do update set name=excluded.name,site_id=excluded.site_id,tunnel_id=excluded.tunnel_id,shift_id=excluded.shift_id,extra=excluded.extra,import_row_hash=excluded.import_row_hash,updated_at=now(),version=operator.version+1""".trimIndent())</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("""insert into technician(eid,name,function,phone,site_id,tunnel_id,shift_id,extra,import_row_hash) values (?,?,?,?,?,?,?,?::jsonb,?) on conflict(eid) do update set name=excluded.name,function=excluded.function,phone=excluded.phone,site_id=excluded.site_id,tunnel_id=excluded.tunnel_id,shift_id=excluded.shift_id,extra=excluded.extra,import_row_hash=excluded.import_row_hash,updated_at=now(),version=technician.version+1""".trimIndent())</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("insert into audit_event(actor_id,action,entity_type,entity_id,occurred_at,metadata,event_hash) values (?,?,'import_batch',?,now(),?::jsonb,?)")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("insert into equipment_type(name,source) values (?,'IMPORT') on conflict(lower(name)) do update set name=equipment_type.name returning id")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("insert into import_batch(id,profile_id,user_id,file_name,file_sha256,storage_key,state) values (?,?,?,?,?,?,'PREVIEWED')")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("insert into import_profile(id,name,kind,sheet_name,column_mapping,created_by) values (?,?,?,?,?::jsonb,?)")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("insert into import_row(batch_id,row_number,business_key,row_hash,state,data,extra,warnings,rejection_reason) values (?,?,?, ?, ?,?::jsonb,?::jsonb,?::jsonb,?)")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("select distinct r.data->'values'->>'type' from import_row r join import_batch b on b.id=r.batch_id where r.batch_id=? and r.state='NEW' and r.data->'values'->>'type' is not null and not exists(select 1 from equipment_type et where lower(et.name)=lower(r.data->'values'->>'type')) order by 1")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("select id from import_profile where active order by name").use { ps -> ps.executeQuery().use { rs -> buildList { while (rs.next()) profile(c, rs.getObject(1, UUID::class.java))?.let(::add) } } }</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("select id from site where state='ACTIVE' and (regexp_replace(lower(trim(name)), '[[:space:]]+', '', 'g')=? or regexp_replace(lower(trim(code)), '[[:space:]]+', '', 'g')=?)")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("select id from tunnel where site_id=? and state='ACTIVE' and (lower(trim(name))=lower(trim(?)) or lower(trim(code))=lower(trim(?)))")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("select id,name,kind,sheet_name,column_mapping,version from import_profile where id=? and active")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("select id,state,file_sha256,new_count,updated_count,unchanged_count,rejected_count from import_batch where id=?")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("select profile_id,state,file_sha256 from import_batch where id=? for update")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("select row_number,business_key,rejection_reason from import_row where batch_id=? and state='REJECTED' order by row_number")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("select row_number,business_key,state,rejection_reason,warnings from import_row where batch_id=? and row_number>=? order by row_number limit ?")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("select row_number,row_hash,state,data from import_row where batch_id=? order by row_number")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("update import_batch set new_count=?,updated_count=?,unchanged_count=?,rejected_count=? where id=?")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$c.prepareStatement("update import_batch set state='COMMITTED',apply_updates=?,committed_at=now() where id=?")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$fun batch(id: UUID): ImportBatchView</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$if (!found) throw IllegalArgumentException("The selected sheet '${requestedSheet ?: "first"}' was not found")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$if (mapped.values.values.all { it.isNullOrBlank() } &amp;&amp; mapped.extra.values.all(String::isBlank)) return@streamWorkbook</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$if (row.siteId == null || !hasSiteAccess(c, actor, UUID.fromString(row.siteId))) throw AuthFailure("IMPORT_SITE_NOT_AUTHORIZED")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$if (state == "REJECTED" || state == "UNCHANGED" || (state == "UPDATED" &amp;&amp; !applyUpdates)) continue</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$if (tunnelRaw != null &amp;&amp; tunnelId == null) errors += "Tunnel '$tunnelRaw' does not match an active tunnel at the selected site"</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$private fun normalizeValue(value: String)</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$private fun sha256(bytes: ByteArray)</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$ps.executeQuery().use { rs -> buildList { while (rs.next()) add(ImportRowView(rs.getInt(1), rs.getString(2), rs.getString(3), rs.getString(4), json.decodeFromString(rs.getString(5)))) } }</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$ps.executeQuery().use { rs -> if (!rs.next()) null else ImportProfileView(rs.getObject(1, UUID::class.java).toString(), rs.getString(2), ImportKind.valueOf(rs.getString(3)), rs.getString(4), json.decodeFromString(rs.getString(5)), rs.getLong(6)) }</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$ps.executeQuery().use { rs -> if (rs.next()) Triple(rs.getObject(1, UUID::class.java), rs.getString(2), rs.getString(3)) else throw AuthFailure("IMPORT_NOT_FOUND") }</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$require(mapping.isNotEmpty() &amp;&amp; mapping.values.all(String::isNotBlank)) { "Column mappings must contain header names" }</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$val canonical = (values.toSortedMap().map { (k, v) -> "$k=${normalizeValue(v.orEmpty())}" } + extra.toSortedMap().map { (k, v) -> "extra.$k=${normalizeValue(v)}" }).joinToString("\n")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$val currentState = classify(c, profile.kind, businessKey(profile.kind, row.values)!!, rowHash)</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$val errors = validation.errors + if (scopeError) listOf("The site is outside the importer's authorized scope") else emptyList()</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$val extra = headers.filterKeys { normalize(it) !in used }.mapKeys { it.key.trim() }.mapValues { it.value.trim() }</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$val mappingJson = buildJsonObject { mapping.toSortedMap().forEach { (key, value) -> put(key, value.trim()) } }.toString()</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$val metadata = "{\"fileSha256\":\"$sha\",\"new\":${counts.new},\"updated\":${counts.updated},\"unchanged\":${counts.unchanged},\"rejected\":${counts.rejected}}"</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$val persisted = PersistedRow(mapped.values, mapped.extra, warnings, validation.siteId?.toString(), validation.tunnelId?.toString(), validation.shiftId?.toString())</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$val reason = (errors + if (duplicate) listOf("Duplicate business key '$key' in this workbook") else emptyList()).takeIf { it.isNotEmpty() }?.joinToString("; ")</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$val sheetHandler = XSSFSheetXMLHandler(reader.stylesTable, null, sharedStrings, contentHandler, formatter, false)</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$val values = profile.columnMapping.mapValues { (_, header) -> normalizedHeaders[normalize(header)]?.let(headers::get)?.trim()?.ifEmpty { null } }</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService$while (rs.next()) appendLine(listOf(rs.getString(1), rs.getString(2), rs.getString(3)).joinToString(",") { csv(it ?: "") })</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService.&lt;no name provided>$current.forEach { (col, value) -> if (col &lt; header.size &amp;&amp; header[col].isNotBlank()) values[header[col]] = value.trim() }</ID>
+    <ID>MaxLineLength:ImportService.kt$ImportService.Companion$ImportKind.ASSET to setOf("asset_id", "equipment_code", "name", "description", "type", "model", "serial_number", "manufacture_year", "site", "tunnel", "engine_hours_current", "remarks")</ID>
+    <ID>MaxLineLength:RestartPersistenceTest.kt$RestartPersistenceTest$c.prepareStatement("insert into app_user(id,username,full_name,employee_id,role,password_hash) values (?,?,?,?,?,'not-used')")</ID>
+    <ID>MaxLineLength:RestartPersistenceTest.kt$RestartPersistenceTest$c.prepareStatement("insert into equipment(id,asset_id,equipment_code,name,type_id,site_id) values (?,?,?,?,?,?)")</ID>
+    <ID>MaxLineLength:RestartPersistenceTest.kt$RestartPersistenceTest$val recorded = service.record(actor, equipment, 0, key, OperationalStatus.DOWN, "Hydraulic pressure loss", null, null, null, null, null, Instant.parse("2026-11-05T08:00:00Z"))</ID>
+    <ID>MaxLineLength:RestartPersistenceTest.kt$RestartPersistenceTest$val replayed = restarted.record(actor, equipment, 999, key, OperationalStatus.DOWN, "Hydraulic pressure loss", null, null, null, null, null, Instant.parse("2026-11-05T08:00:00Z"))</ID>
+    <ID>MaxLineLength:RolePermissionsTest.kt$RolePermissionsTest$Role.ADMINISTRATOR to setOf("EQUIPMENT_VIEW", "USER_MANAGE", "CONFIG_MANAGE", "IMPORT_RUN", "CHECKLIST_MANAGE", "AUDIT_VIEW")</ID>
+    <ID>MaxLineLength:RolePermissionsTest.kt$RolePermissionsTest$Role.MANAGER to setOf("EQUIPMENT_VIEW", "PART_APPROVE", "STATUS_OVERRIDE", "INSPECTION_REVIEW", "REPORT_APPROVE", "REPORT_VIEW_APPROVED", "COST_VIEW", "AUDIT_VIEW")</ID>
+    <ID>MaxLineLength:RolePermissionsTest.kt$RolePermissionsTest$Role.MECHANIC to setOf("EQUIPMENT_VIEW", "INSPECTION_SUBMIT", "STATUS_UPDATE", "BREAKDOWN_MANAGE", "MAINTENANCE_RECORD", "PART_REQUEST", "REPORT_VIEW_OWN_SITE")</ID>
+    <ID>MaxLineLength:RolePermissionsTest.kt$RolePermissionsTest$Role.SUPERVISOR to setOf("EQUIPMENT_VIEW", "STATUS_UPDATE", "BREAKDOWN_MANAGE", "MAINTENANCE_RECORD", "MAINTENANCE_VERIFY", "PART_REQUEST", "PART_APPROVE", "REPORT_PREPARE", "REPORT_VIEW_OWN_SITE")</ID>
+    <ID>MaxLineLength:StatusHistoryTest.kt$StatusHistoryTest$c.prepareStatement("insert into app_user(id,username,full_name,employee_id,role,password_hash) values (?,?,?,?,?,'not-used')")</ID>
+    <ID>MaxLineLength:StatusHistoryTest.kt$StatusHistoryTest$c.prepareStatement("insert into equipment(id,asset_id,equipment_code,name,type_id,site_id) values (?,?,?,?,?,?)")</ID>
+    <ID>MaxLineLength:StatusHistoryTest.kt$StatusHistoryTest$service.record(actor, equipment, 0, key(), OperationalStatus.OPERATIONAL, null, null, null, null, null, null, Instant.parse("2026-11-05T10:00:00Z"))</ID>
+    <ID>MaxLineLength:StatusHistoryTest.kt$StatusHistoryTest$service.record(author, equipment, 0, key(), OperationalStatus.DOWN, "Cable damage", null, null, null, null, null, Instant.parse("2026-11-05T08:00:00Z"))</ID>
+    <ID>MaxLineLength:StatusHistoryTest.kt$StatusHistoryTest$val late = service.record(actor, equipment, 1, key(), OperationalStatus.DOWN, "Late breakdown", null, null, null, null, null, Instant.parse("2026-11-05T08:00:00Z"))</ID>
+    <ID>MaxLineLength:StatusPolicy.kt$StatusPolicy$OperationalStatus.OPERATIONAL -> if (openDefects > 0) EquipmentCondition.OPERATIONAL_WITH_DEFECTS else EquipmentCondition.OPERATIONAL</ID>
+    <ID>MaxLineLength:StatusPolicy.kt$StatusPolicy$if (change.problem.isNullOrBlank()) add(FieldError("problem", "A problem description is required for this status."))</ID>
+    <ID>MaxLineLength:StatusPolicyTest.kt$StatusPolicyTest$assertEquals("problem", StatusPolicy.validate(StatusChangeInput(OperationalStatus.DOWN, null, null)).single().field)</ID>
+    <ID>MaxLineLength:StatusPolicyTest.kt$StatusPolicyTest$assertEquals(EquipmentCondition.OPERATIONAL_WITH_DEFECTS, StatusPolicy.condition(OperationalStatus.OPERATIONAL, 1))</ID>
+    <ID>MaxLineLength:StatusPolicyTest.kt$StatusPolicyTest$assertEquals(setOf("problem", "actionTaken"), StatusPolicy.validate(StatusChangeInput(OperationalStatus.UNDER_REPAIR, null, null)).map { it.field }.toSet())</ID>
+    <ID>MaxLineLength:StatusPolicyTest.kt$StatusPolicyTest$assertTrue(StatusPolicy.validate(StatusChangeInput(OperationalStatus.UNDER_REPAIR, "Pump failure", "Replaced seal")).isEmpty())</ID>
+    <ID>MaxLineLength:StatusRoutes.kt$"FORBIDDEN", "SITE_NOT_AUTHORIZED", "IDEMPOTENCY_KEY_REPLAY_FORBIDDEN" -> HttpStatusCode.Forbidden</ID>
+    <ID>MaxLineLength:StatusRoutes.kt$call.respond(HttpStatusCode.BadRequest, ApiError("IDEMPOTENCY_KEY_REQUIRED", "Idempotency-Key is required."))</ID>
+    <ID>MaxLineLength:StatusRoutes.kt$call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_EQUIPMENT_ID", "The equipment ID is invalid."))</ID>
+    <ID>MaxLineLength:StatusRoutes.kt$call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_OCCURRED_AT", "occurredAt must be an ISO-8601 instant."))</ID>
+    <ID>MaxLineLength:StatusRoutes.kt$call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_STATUS_CHANGE", e.message ?: "The status change is invalid."))</ID>
+    <ID>MaxLineLength:StatusRoutes.kt$call.respond(HttpStatusCode.Created, service.record(actor, id, version, key, body.status, body.problem, body.actionTaken, body.partsRequired, body.remarks, body.tunnelId?.let(UUID::fromString), body.shiftId?.let(UUID::fromString), occurredAt))</ID>
+    <ID>MaxLineLength:StatusRoutes.kt$call.respond(HttpStatusCode.Forbidden, ApiError("FORBIDDEN", "You are not allowed to update equipment status."))</ID>
+    <ID>MaxLineLength:StatusRoutes.kt$call.respond(HttpStatusCode.fromValue(428), ApiError("IF_MATCH_REQUIRED", "A valid If-Match equipment version is required."))</ID>
+    <ID>MaxLineLength:StatusRoutes.kt$call.respond(if (e.code == "FORBIDDEN" || e.code == "SITE_NOT_AUTHORIZED") HttpStatusCode.Forbidden else HttpStatusCode.NotFound, ApiError(e.code, "The status history is unavailable."))</ID>
+    <ID>MaxLineLength:StatusRoutes.kt$call.respond(service.activeProblems(actor, site, call.request.queryParameters["limit"]?.toIntOrNull() ?: 100))</ID>
+    <ID>MaxLineLength:StatusRoutes.kt$write("id: ${event.recordedAt}|${event.id}\nevent: equipment-status\ndata: ${kotlinx.serialization.json.Json.encodeToString(StatusEventView.serializer(),event)}\n\n")</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService$)</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService$EquipmentLock(rs.getObject(1, UUID::class.java), rs.getObject(2, UUID::class.java), rs.getString(3), rs.getLong(4), rs.getString(5))</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService$c.prepareStatement("""insert into equipment_status_event(id,equipment_id,seq,previous_status,new_status,problem,action_taken,parts_required,remarks,site_id,tunnel_id,shift_id,user_id,user_eid,occurred_at,recorded_at,source,idempotency_key) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,clock_timestamp(),'MANUAL',?)""")</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService$c.prepareStatement("""select ev.* from equipment_status_event ev where ev.equipment_id=? and (exists(select 1 from user_site_access a where a.user_id=? and a.site_id=ev.site_id) or (? and not exists(select 1 from user_site_access a where a.user_id=?))) order by ev.occurred_at desc,ev.seq desc limit ?""")</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService$c.prepareStatement("insert into audit_event(actor_id,action,entity_type,entity_id,occurred_at,metadata,event_hash) values (?,'EQUIPMENT_STATUS_CHANGED','equipment',?,now(),?::jsonb,?)")</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService$c.prepareStatement("insert into outbox_message(id,topic,payload,occurred_at) values (?, 'EQUIPMENT_STATUS_CHANGED', ?::jsonb, now())")</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService$c.prepareStatement("select coalesce(max(seq),0)+1 from equipment_status_event where equipment_id=?")</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService$c.prepareStatement("select e.site_id,e.tunnel_id,e.current_status,e.version,u.employee_id from equipment e join app_user u on u.id=? where e.id=? for update of e")</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService$c.prepareStatement("select ev.* from equipment_status_event ev where (?::timestamptz is null or ev.recorded_at>? or (ev.recorded_at=? and ev.id>?)) and (exists(select 1 from user_site_access a where a.user_id=? and a.site_id=ev.site_id) or (? and not exists(select 1 from user_site_access a where a.user_id=?))) order by ev.recorded_at,ev.id limit 100")</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService$c.prepareStatement("select id,new_status,occurred_at from equipment_status_event where equipment_id=? order by occurred_at desc,seq desc limit 1")</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService$c.prepareStatement("update equipment set current_status=?,current_status_event_id=?,current_problem=?,current_shift_id=?,last_status_update_at=?,last_status_reported_by=?,version=version+1,updated_at=now() where id=? and version=?")</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService$if (!RolePermissions.allows(actor.role, "STATUS_UPDATE") || it.event.userId != actor.id.toString() || !hasSiteAccess(c, actor, UUID.fromString(it.event.siteId))) throw AuthFailure("IDEMPOTENCY_KEY_REPLAY_FORBIDDEN")</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService$if (effectiveTunnel != null &amp;&amp; !exists(c, "select exists(select 1 from tunnel where id=? and site_id=? and state='ACTIVE')", effectiveTunnel, equipment.siteId)) throw AuthFailure("TUNNEL_NOT_IN_SITE")</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService$if (shiftId != null &amp;&amp; !exists(c, "select exists(select 1 from shift where id=?)", shiftId)) throw AuthFailure("SHIFT_NOT_FOUND")</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService$private fun java.sql.ResultSet.toView()</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService$ps.executeQuery().use { if (it.next()) it.getObject(1, UUID::class.java) else throw AuthFailure("EQUIPMENT_NOT_FOUND") }</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService$ps.setString(2, "{\"eventId\":\"$id\",\"equipmentId\":\"$equipmentId\",\"siteId\":\"${equipment.siteId}\",\"status\":\"${newStatus.name}\"}")</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService$val sql = """select ev.* from equipment e join equipment_status_event ev on ev.id=e.current_status_event_id where e.lifecycle_state='ACTIVE' and e.current_status in ('DOWN','UNDER_REPAIR') and (?::uuid is null or e.site_id=?) and (exists(select 1 from user_site_access a where a.user_id=? and a.site_id=e.site_id) or (? and not exists(select 1 from user_site_access a where a.user_id=?))) order by ev.occurred_at desc limit ?"""</ID>
+    <ID>MaxLineLength:StatusService.kt$StatusService.Companion$private val broadRoles = setOf(rw.rutongo.mmems.shared.enums.Role.MANAGER, rw.rutongo.mmems.shared.enums.Role.GENERAL_MANAGER, rw.rutongo.mmems.shared.enums.Role.ADMINISTRATOR)</ID>
+    <ID>MaxLineLength:StatusServiceIntegrationTest.kt$StatusServiceIntegrationTest$c.prepareStatement("insert into app_user(id,username,full_name,employee_id,role,password_hash) values (?,?,?,?,?,'not-used')")</ID>
+    <ID>MaxLineLength:StatusServiceIntegrationTest.kt$StatusServiceIntegrationTest$c.prepareStatement("insert into equipment(id,asset_id,equipment_code,name,type_id,site_id) values (?,?,?,?,?,?)")</ID>
+    <ID>MaxLineLength:StatusServiceIntegrationTest.kt$StatusServiceIntegrationTest$c.prepareStatement("select current_status,current_status_event_id,current_problem,version from equipment where id=?")</ID>
+    <ID>MaxLineLength:StatusServiceIntegrationTest.kt$StatusServiceIntegrationTest$service.record(actor, equipment, 0, key(), OperationalStatus.DOWN, "Bearing failure", null, null, null, null, null, Instant.parse("2026-11-05T08:00:00Z"))</ID>
+    <ID>MaxLineLength:StatusServiceIntegrationTest.kt$StatusServiceIntegrationTest$service.record(actor, equipment, 0, key(), OperationalStatus.OPERATIONAL, null, null, null, null, null, null, Instant.parse("2026-11-05T09:00:00Z"))</ID>
+    <ID>MaxLineLength:StatusServiceIntegrationTest.kt$StatusServiceIntegrationTest$service.record(manager, equipment, 0, key(), OperationalStatus.OPERATIONAL, null, null, null, null, null, null, Instant.parse("2026-11-05T08:00:00Z"))</ID>
+    <ID>MaxLineLength:StatusServiceIntegrationTest.kt$StatusServiceIntegrationTest$service.record(otherSite, equipment, 0, key(), OperationalStatus.OPERATIONAL, null, null, null, null, null, null, Instant.parse("2026-11-05T08:00:00Z"))</ID>
+    <ID>MaxLineLength:StatusServiceIntegrationTest.kt$StatusServiceIntegrationTest$service.record(writer, down, 0, key(), OperationalStatus.DOWN, "Engine failure", null, null, null, null, null, Instant.parse("2026-11-05T08:00:00Z"))</ID>
+    <ID>MaxLineLength:StatusServiceIntegrationTest.kt$StatusServiceIntegrationTest$service.record(writer, operational, 0, key(), OperationalStatus.OPERATIONAL, null, null, null, null, null, null, Instant.parse("2026-11-05T10:00:00Z"))</ID>
+    <ID>MaxLineLength:StatusServiceIntegrationTest.kt$StatusServiceIntegrationTest$service.record(writer, underRepair, 0, key(), OperationalStatus.UNDER_REPAIR, "Gearbox failure", "Rebuilding gearbox", null, null, null, null, Instant.parse("2026-11-05T09:00:00Z"))</ID>
+    <ID>MaxLineLength:StatusServiceIntegrationTest.kt$StatusServiceIntegrationTest$val eventB = service.record(writer, equipmentB, 0, key(), OperationalStatus.DOWN, "Site B failure", null, null, null, null, null, Instant.parse("2026-11-05T09:00:00Z"))</ID>
+    <ID>MaxLineLength:StatusServiceIntegrationTest.kt$StatusServiceIntegrationTest$val first = service.record(actor, equipment, 0, idempotencyKey, OperationalStatus.OPERATIONAL, null, null, null, null, null, null, Instant.parse("2026-11-05T08:00:00Z"))</ID>
+    <ID>MaxLineLength:StatusServiceIntegrationTest.kt$StatusServiceIntegrationTest$val firstA = service.record(writer, equipmentA, 0, key(), OperationalStatus.OPERATIONAL, null, null, null, null, null, null, Instant.parse("2026-11-05T08:00:00Z"))</ID>
+    <ID>MaxLineLength:StatusServiceIntegrationTest.kt$StatusServiceIntegrationTest$val replayed = service.record(actor, equipment, 999, idempotencyKey, OperationalStatus.OPERATIONAL, null, null, null, null, null, null, Instant.parse("2026-11-05T08:00:00Z"))</ID>
+    <ID>MaxLineLength:StatusServiceIntegrationTest.kt$StatusServiceIntegrationTest$val result = service.record(actor, equipment, 0, key(), OperationalStatus.DOWN, "Hydraulic leak", null, null, null, null, null, Instant.parse("2026-11-05T08:00:00Z"))</ID>
+    <ID>MaxLineLength:StatusServiceIntegrationTest.kt$StatusServiceIntegrationTest$val secondA = service.record(writer, equipmentA, 1, key(), OperationalStatus.UNDER_REPAIR, "Hydraulic failure", "Hose replaced", null, null, null, null, Instant.parse("2026-11-05T10:00:00Z"))</ID>
+    <ID>NestedBlockDepth:EquipmentService.kt$EquipmentService$fun createEquipment( actor: Principal, assetId: String, equipmentCode: String, name: String, typeId: UUID, siteId: UUID, tunnelId: UUID?, description: String?, model: String?, serialNumber: String?, manufactureYear: Int?, engineHours: java.math.BigDecimal?, requiresDailyInspection: Boolean, ): EquipmentSummary</ID>
+    <ID>NestedBlockDepth:EquipmentService.kt$EquipmentService$fun createEquipmentType( actor: Principal, name: String, ): EquipmentTypeView</ID>
+    <ID>NestedBlockDepth:EquipmentService.kt$EquipmentService$fun createSchedule( actor: Principal, shiftCode: String, siteId: UUID?, start: LocalTime, end: LocalTime, windowMinutes: Int, backstopHours: Int, effectiveFrom: LocalDate, effectiveTo: LocalDate?, ): ShiftScheduleView</ID>
+    <ID>NestedBlockDepth:EquipmentService.kt$EquipmentService$fun equipment( user: Principal, id: UUID, ): EquipmentSummary?</ID>
+    <ID>NestedBlockDepth:EquipmentService.kt$EquipmentService$fun move( user: Principal, id: UUID, destinationSite: UUID, destinationTunnel: UUID?, reason: String, expectedVersion: Long, ): EquipmentSummary</ID>
+    <ID>NestedBlockDepth:EquipmentService.kt$EquipmentService$fun updateEquipment( actor: Principal, id: UUID, expectedVersion: Long, equipmentCode: String, name: String, typeId: UUID, description: String?, model: String?, serialNumber: String?, manufactureYear: Int?, engineHours: java.math.BigDecimal?, requiresDailyInspection: Boolean, lifecycleState: String, ): EquipmentSummary</ID>
+    <ID>NestedBlockDepth:EquipmentService.kt$EquipmentService$fun updateShift( actor: UUID, code: String, expectedVersion: Long, name: String, ): ShiftView</ID>
+    <ID>NestedBlockDepth:EquipmentService.kt$EquipmentService$fun updateSite( actor: Principal, id: UUID, expectedVersion: Long, name: String, timezone: String, state: String, ): SiteView</ID>
+    <ID>NestedBlockDepth:EquipmentService.kt$EquipmentService$fun updateTunnel( actor: Principal, id: UUID, expectedVersion: Long, code: String, name: String, state: String, ): TunnelView</ID>
+    <ID>NestedBlockDepth:FoundationMigrationTest.kt$FoundationMigrationTest$@Test fun `migration seeds sites and audit rows are immutable and hash chained`()</ID>
+    <ID>NestedBlockDepth:IdentityFlowTest.kt$IdentityFlowTest$@Test fun `bootstrap login password change site scope and refresh replay protection`()</ID>
+    <ID>NestedBlockDepth:IdentityService.kt$IdentityService$fun bootstrapAdmin( username: String, fullName: String, employeeId: String, password: CharArray, )</ID>
+    <ID>NestedBlockDepth:IdentityService.kt$IdentityService$fun changePassword( principal: Principal, current: CharArray, next: CharArray, )</ID>
+    <ID>NestedBlockDepth:IdentityService.kt$IdentityService$fun createUser( actorId: UUID, username: String, fullName: String, employeeId: String, role: Role, password: CharArray, siteIds: List&lt;UUID>, ): UserView</ID>
+    <ID>NestedBlockDepth:IdentityService.kt$IdentityService$fun login( username: String, password: CharArray, clientType: String, deviceLabel: String?, ): SessionTokens?</ID>
+    <ID>NestedBlockDepth:IdentityService.kt$IdentityService$fun logout(rawToken: String)</ID>
+    <ID>NestedBlockDepth:IdentityService.kt$IdentityService$fun refresh( rawToken: String, clientType: String, deviceLabel: String?, ): SessionTokens?</ID>
+    <ID>NestedBlockDepth:IdentityService.kt$IdentityService$fun setUserActive( actorId: UUID, id: UUID, active: Boolean, )</ID>
+    <ID>NestedBlockDepth:IdentityService.kt$IdentityService$fun updateUser( actorId: UUID, id: UUID, expectedVersion: Long, fullName: String, employeeId: String, role: Role, siteIds: List&lt;UUID>, ): UserView</ID>
+    <ID>NestedBlockDepth:IdentityService.kt$IdentityService$private fun loadUser( c: Connection, id: UUID, ): UserView?</ID>
+    <ID>NestedBlockDepth:ImportIdempotencyTest.kt$ImportIdempotencyTest$@Test fun `preview commit and repeated import are idempotent without writing operational status`()</ID>
+    <ID>NestedBlockDepth:ImportService.kt$ImportService$fun commit( actor: Principal, id: UUID, applyUpdates: Boolean, ): ImportBatchView</ID>
+    <ID>NestedBlockDepth:ImportService.kt$ImportService$fun preview( actor: Principal, profileId: UUID, fileName: String, bytes: ByteArray, ): ImportBatchView</ID>
+    <ID>NestedBlockDepth:ImportService.kt$ImportService$private fun batch( c: Connection, id: UUID, ): ImportBatchView?</ID>
+    <ID>NestedBlockDepth:ImportService.kt$ImportService$private fun streamWorkbook( bytes: ByteArray, requestedSheet: String?, consume: (Int, Map&lt;String, String>) -> Unit, )</ID>
+    <ID>NestedBlockDepth:StatusService.kt$StatusService$fun record( actor: Principal, equipmentId: UUID, expectedVersion: Long, idempotencyKey: String, newStatus: OperationalStatus, problem: String?, actionTaken: String?, partsRequired: String?, remarks: String?, tunnelId: UUID?, shiftId: UUID?, occurredAt: Instant, ): StatusResult</ID>
+    <ID>NestedBlockDepth:StatusService.kt$StatusService$private fun findByKey( c: Connection, key: String, ): StatusResult?</ID>
+    <ID>ReturnCount:IdentityService.kt$IdentityService$fun login( username: String, password: CharArray, clientType: String, deviceLabel: String?, ): SessionTokens?</ID>
+    <ID>ReturnCount:StatusService.kt$StatusService$fun record( actor: Principal, equipmentId: UUID, expectedVersion: Long, idempotencyKey: String, newStatus: OperationalStatus, problem: String?, actionTaken: String?, partsRequired: String?, remarks: String?, tunnelId: UUID?, shiftId: UUID?, occurredAt: Instant, ): StatusResult</ID>
+    <ID>ThrowsCount:EquipmentService.kt$EquipmentService$fun createEquipment( actor: Principal, assetId: String, equipmentCode: String, name: String, typeId: UUID, siteId: UUID, tunnelId: UUID?, description: String?, model: String?, serialNumber: String?, manufactureYear: Int?, engineHours: java.math.BigDecimal?, requiresDailyInspection: Boolean, ): EquipmentSummary</ID>
+    <ID>ThrowsCount:EquipmentService.kt$EquipmentService$fun createEquipmentType( actor: Principal, name: String, ): EquipmentTypeView</ID>
+    <ID>ThrowsCount:EquipmentService.kt$EquipmentService$fun createSchedule( actor: Principal, shiftCode: String, siteId: UUID?, start: LocalTime, end: LocalTime, windowMinutes: Int, backstopHours: Int, effectiveFrom: LocalDate, effectiveTo: LocalDate?, ): ShiftScheduleView</ID>
+    <ID>ThrowsCount:EquipmentService.kt$EquipmentService$fun createSite( actor: UUID, code: String, name: String, timezone: String, ): SiteView</ID>
+    <ID>ThrowsCount:EquipmentService.kt$EquipmentService$fun createTunnel( actor: Principal, siteId: UUID, code: String, name: String, ): TunnelView</ID>
+    <ID>ThrowsCount:EquipmentService.kt$EquipmentService$fun move( user: Principal, id: UUID, destinationSite: UUID, destinationTunnel: UUID?, reason: String, expectedVersion: Long, ): EquipmentSummary</ID>
+    <ID>ThrowsCount:EquipmentService.kt$EquipmentService$fun updateEquipment( actor: Principal, id: UUID, expectedVersion: Long, equipmentCode: String, name: String, typeId: UUID, description: String?, model: String?, serialNumber: String?, manufactureYear: Int?, engineHours: java.math.BigDecimal?, requiresDailyInspection: Boolean, lifecycleState: String, ): EquipmentSummary</ID>
+    <ID>ThrowsCount:EquipmentService.kt$EquipmentService$fun updateShift( actor: UUID, code: String, expectedVersion: Long, name: String, ): ShiftView</ID>
+    <ID>ThrowsCount:EquipmentService.kt$EquipmentService$fun updateSite( actor: Principal, id: UUID, expectedVersion: Long, name: String, timezone: String, state: String, ): SiteView</ID>
+    <ID>ThrowsCount:EquipmentService.kt$EquipmentService$fun updateTunnel( actor: Principal, id: UUID, expectedVersion: Long, code: String, name: String, state: String, ): TunnelView</ID>
+    <ID>ThrowsCount:IdentityService.kt$IdentityService$fun changePassword( principal: Principal, current: CharArray, next: CharArray, )</ID>
+    <ID>ThrowsCount:IdentityService.kt$IdentityService$fun updateUser( actorId: UUID, id: UUID, expectedVersion: Long, fullName: String, employeeId: String, role: Role, siteIds: List&lt;UUID>, ): UserView</ID>
+    <ID>ThrowsCount:ImportService.kt$ImportService$fun preview( actor: Principal, profileId: UUID, fileName: String, bytes: ByteArray, ): ImportBatchView</ID>
+    <ID>ThrowsCount:StatusService.kt$StatusService$fun record( actor: Principal, equipmentId: UUID, expectedVersion: Long, idempotencyKey: String, newStatus: OperationalStatus, problem: String?, actionTaken: String?, partsRequired: String?, remarks: String?, tunnelId: UUID?, shiftId: UUID?, occurredAt: Instant, ): StatusResult</ID>
+    <ID>TooGenericExceptionCaught:BlobStore.kt$PrivateFileBlobStore$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:EquipmentService.kt$EquipmentService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:IdentityService.kt$IdentityService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:IdentityService.kt$IdentityService$error: Exception</ID>
+    <ID>TooGenericExceptionCaught:ImportService.kt$ImportService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:StatusService.kt$StatusService$e: Exception</ID>
+    <ID>TooManyFunctions:EquipmentService.kt$EquipmentService</ID>
+    <ID>TooManyFunctions:IdentityService.kt$IdentityService</ID>
+    <ID>TooManyFunctions:ImportService.kt$ImportService</ID>
+    <ID>TooManyFunctions:StatusService.kt$StatusService</ID>
+    <ID>UseRequire:ImportService.kt$ImportService$throw IllegalArgumentException("The selected sheet '${requestedSheet ?: "first"}' was not found")</ID>
+    <ID>WildcardImport:Application.kt$import io.ktor.http.*</ID>
+    <ID>WildcardImport:Application.kt$import io.ktor.serialization.kotlinx.json.*</ID>
+    <ID>WildcardImport:Application.kt$import io.ktor.server.application.*</ID>
+    <ID>WildcardImport:Application.kt$import io.ktor.server.plugins.*</ID>
+    <ID>WildcardImport:Application.kt$import io.ktor.server.plugins.contentnegotiation.*</ID>
+    <ID>WildcardImport:Application.kt$import io.ktor.server.plugins.statuspages.*</ID>
+    <ID>WildcardImport:Application.kt$import io.ktor.server.response.*</ID>
+    <ID>WildcardImport:Application.kt$import io.ktor.server.routing.*</ID>
+    <ID>WildcardImport:EquipmentRoutes.kt$import io.ktor.http.*</ID>
+    <ID>WildcardImport:EquipmentRoutes.kt$import io.ktor.server.application.*</ID>
+    <ID>WildcardImport:EquipmentRoutes.kt$import io.ktor.server.request.*</ID>
+    <ID>WildcardImport:EquipmentRoutes.kt$import io.ktor.server.response.*</ID>
+    <ID>WildcardImport:EquipmentRoutes.kt$import io.ktor.server.routing.*</ID>
+    <ID>WildcardImport:IdentityRoutes.kt$import io.ktor.http.*</ID>
+    <ID>WildcardImport:IdentityRoutes.kt$import io.ktor.server.application.*</ID>
+    <ID>WildcardImport:IdentityRoutes.kt$import io.ktor.server.request.*</ID>
+    <ID>WildcardImport:IdentityRoutes.kt$import io.ktor.server.response.*</ID>
+    <ID>WildcardImport:IdentityRoutes.kt$import io.ktor.server.routing.*</ID>
+    <ID>WildcardImport:ImportRoutes.kt$import io.ktor.http.*</ID>
+    <ID>WildcardImport:ImportRoutes.kt$import io.ktor.http.content.*</ID>
+    <ID>WildcardImport:ImportRoutes.kt$import io.ktor.server.application.*</ID>
+    <ID>WildcardImport:ImportRoutes.kt$import io.ktor.server.request.*</ID>
+    <ID>WildcardImport:ImportRoutes.kt$import io.ktor.server.response.*</ID>
+    <ID>WildcardImport:ImportRoutes.kt$import io.ktor.server.routing.*</ID>
+    <ID>WildcardImport:StatusRoutes.kt$import io.ktor.http.*</ID>
+    <ID>WildcardImport:StatusRoutes.kt$import io.ktor.server.application.*</ID>
+    <ID>WildcardImport:StatusRoutes.kt$import io.ktor.server.request.*</ID>
+    <ID>WildcardImport:StatusRoutes.kt$import io.ktor.server.response.*</ID>
+    <ID>WildcardImport:StatusRoutes.kt$import io.ktor.server.routing.*</ID>
+  </CurrentIssues>
+</SmellBaseline>

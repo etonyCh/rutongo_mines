@@ -1,0 +1,1757 @@
+openapi: 3.0.3
+info:
+  title: Rutongo MMEMS API
+  version: 1.0.0
+  description: |
+    Mechanical equipment management API. All endpoints except health, login,
+    refresh and logout require a Bearer access token. Equipment writes use
+    optimistic concurrency through If-Match; status writes also require an
+    Idempotency-Key.
+servers:
+  - url: http://localhost:8080
+security:
+  - bearerAuth: []
+tags:
+  - name: Health
+  - name: Authentication
+  - name: Users
+  - name: Organization
+  - name: Equipment
+  - name: Status
+  - name: Imports
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      security: []
+      summary: Liveness probe
+      responses:
+        "200":
+          description: Service is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /api/v1/auth/login:
+    post:
+      tags: [Authentication]
+      security: []
+      summary: Authenticate a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Session created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/TooManyRequests"
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [Authentication]
+      security: []
+      summary: Rotate an access token
+      description: WEB clients send the refresh cookie and CSRF headers; mobile clients send refreshToken in the body.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: Session refreshed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/auth/logout:
+    post:
+      tags: [Authentication]
+      security: []
+      summary: Revoke a refresh token and clear the refresh cookie
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LogoutRequest"
+      responses:
+        "204":
+          description: Session revoked
+
+  /api/v1/auth/change-password:
+    post:
+      tags: [Authentication]
+      summary: Change the current user's password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordRequest"
+      responses:
+        "204":
+          description: Password changed
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/me:
+    get:
+      tags: [Authentication]
+      summary: Return the authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserView"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /api/v1/users:
+    get:
+      tags: [Users]
+      summary: List users
+      responses:
+        "200":
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Users]
+      summary: Create a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateUserRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Username or employee ID already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/users/{id}:
+    put:
+      tags: [Users]
+      summary: Update a user
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateUserRequest"
+      responses:
+        "200":
+          description: User updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Version conflict or duplicate user key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/users/{id}/active:
+    patch:
+      tags: [Users]
+      summary: Activate or deactivate a user
+      parameters:
+        - $ref: "#/components/parameters/UserId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetUserActiveRequest"
+      responses:
+        "204":
+          description: User activation changed
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/audit-events:
+    get:
+      tags: [Users]
+      summary: List recent audit events
+      parameters:
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Audit events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  additionalProperties:
+                    type: string
+                    nullable: true
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v1/sites:
+    get:
+      tags: [Organization]
+      summary: List authorized sites
+      responses:
+        "200":
+          description: Sites
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SiteView"
+    post:
+      tags: [Organization]
+      summary: Create a site
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSiteRequest"
+      responses:
+        "201":
+          description: Site created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Site code already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/sites/{id}:
+    put:
+      tags: [Organization]
+      summary: Update a site
+      parameters:
+        - $ref: "#/components/parameters/SiteId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateSiteRequest"
+      responses:
+        "200":
+          description: Site updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SiteView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/tunnels:
+    get:
+      tags: [Organization]
+      summary: List tunnels
+      parameters:
+        - $ref: "#/components/parameters/SiteIdQuery"
+      responses:
+        "200":
+          description: Tunnels
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TunnelView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+    post:
+      tags: [Organization]
+      summary: Create a tunnel
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTunnelRequest"
+      responses:
+        "201":
+          description: Tunnel created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TunnelView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Duplicate tunnel code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/tunnels/{id}:
+    put:
+      tags: [Organization]
+      summary: Update a tunnel
+      parameters:
+        - $ref: "#/components/parameters/TunnelId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTunnelRequest"
+      responses:
+        "200":
+          description: Tunnel updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TunnelView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict or duplicate code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/shifts:
+    get:
+      tags: [Organization]
+      summary: List shifts
+      responses:
+        "200":
+          description: Shifts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShiftView"
+
+  /api/v1/shifts/{code}:
+    put:
+      tags: [Organization]
+      summary: Rename a shift
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateShiftRequest"
+      responses:
+        "200":
+          description: Shift updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShiftView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Version conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/shifts/schedules:
+    get:
+      tags: [Organization]
+      summary: List shift schedules
+      responses:
+        "200":
+          description: Shift schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShiftScheduleView"
+    post:
+      tags: [Organization]
+      summary: Create a shift schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateShiftScheduleRequest"
+      responses:
+        "201":
+          description: Shift schedule created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShiftScheduleView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/equipment-types:
+    get:
+      tags: [Equipment]
+      summary: List equipment types
+      responses:
+        "200":
+          description: Equipment types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EquipmentTypeView"
+    post:
+      tags: [Equipment]
+      summary: Create an equipment type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEquipmentTypeRequest"
+      responses:
+        "201":
+          description: Equipment type created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EquipmentTypeView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Equipment type already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/technicians:
+    get:
+      tags: [Organization]
+      summary: List technicians
+      responses:
+        "200":
+          description: Technicians
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PersonnelView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v1/operators:
+    get:
+      tags: [Organization]
+      summary: List operators
+      responses:
+        "200":
+          description: Operators
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PersonnelView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v1/equipment:
+    get:
+      tags: [Equipment]
+      summary: Search equipment
+      parameters:
+        - $ref: "#/components/parameters/SiteIdQuery"
+        - name: q
+          in: query
+          schema:
+            type: string
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Equipment matching the filters
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EquipmentSummary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Equipment]
+      summary: Create equipment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateEquipmentRequest"
+      responses:
+        "201":
+          description: Equipment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EquipmentSummary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Duplicate asset or equipment code
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/equipment/{id}:
+    get:
+      tags: [Equipment]
+      summary: Get equipment
+      parameters:
+        - $ref: "#/components/parameters/EquipmentId"
+      responses:
+        "200":
+          description: Equipment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EquipmentSummary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Equipment]
+      summary: Update equipment
+      parameters:
+        - $ref: "#/components/parameters/EquipmentId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateEquipmentRequest"
+      responses:
+        "200":
+          description: Equipment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EquipmentSummary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/equipment/{id}/move:
+    post:
+      tags: [Equipment]
+      summary: Move equipment to another site or tunnel
+      parameters:
+        - $ref: "#/components/parameters/EquipmentId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MovementRequest"
+      responses:
+        "200":
+          description: Equipment moved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EquipmentSummary"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/equipment/{id}/status:
+    post:
+      tags: [Status]
+      summary: Record an equipment status event
+      description: |
+        Appends an immutable status event. The event is projected onto the
+        equipment only when it is the newest event by occurredAt. Late events
+        remain in history but do not regress the current status.
+      parameters:
+        - $ref: "#/components/parameters/EquipmentId"
+        - $ref: "#/components/parameters/IfMatch"
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordStatusRequest"
+      responses:
+        "201":
+          description: Status event recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatusResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Equipment version conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "428":
+          $ref: "#/components/responses/PreconditionRequired"
+
+  /api/v1/equipment/{id}/status-events:
+    get:
+      tags: [Status]
+      summary: Get equipment status history
+      parameters:
+        - $ref: "#/components/parameters/EquipmentId"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Status events ordered by occurredAt descending
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StatusEventView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/active-problems:
+    get:
+      tags: [Status]
+      summary: List equipment currently down or under repair
+      parameters:
+        - $ref: "#/components/parameters/SiteIdQuery"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Active problem status events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StatusEventView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v1/events:
+    get:
+      tags: [Status]
+      summary: Stream equipment status events
+      description: |
+        Server-sent events endpoint. Send Last-Event-ID as
+        "<recordedAt>|<eventId>" to resume after a known event.
+      parameters:
+        - name: Last-Event-ID
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: text/event-stream of equipment-status events
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/import-profiles:
+    get:
+      tags: [Imports]
+      summary: List import profiles
+      responses:
+        "200":
+          description: Import profiles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ImportProfileView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Imports]
+      summary: Create an import profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateImportProfileRequest"
+      responses:
+        "201":
+          description: Import profile created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportProfileView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Import profile already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/imports:
+    post:
+      tags: [Imports]
+      summary: Preview an Excel workbook
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [profileId, file]
+              properties:
+                profileId:
+                  type: string
+                  format: uuid
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Import preview created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportBatchView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "413":
+          description: Workbook exceeds 20 MiB
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/imports/{id}:
+    get:
+      tags: [Imports]
+      summary: Page through import rows
+      parameters:
+        - $ref: "#/components/parameters/ImportId"
+        - name: from
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Import rows
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportRowsPage"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/imports/{id}/commit:
+    post:
+      tags: [Imports]
+      summary: Commit an import preview
+      parameters:
+        - $ref: "#/components/parameters/ImportId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommitImportRequest"
+      responses:
+        "200":
+          description: Import committed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ImportBatchView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Import cannot be committed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/imports/{id}/rejections.csv:
+    get:
+      tags: [Imports]
+      summary: Download rejected import rows
+      parameters:
+        - $ref: "#/components/parameters/ImportId"
+      responses:
+        "200":
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    IfMatch:
+      name: If-Match
+      in: header
+      required: true
+      description: Current resource version, optionally quoted.
+      schema:
+        type: string
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 200
+        default: 100
+    UserId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SiteId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    SiteIdQuery:
+      name: siteId
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+    TunnelId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    EquipmentId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ImportId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Unauthorized:
+      description: Authentication required or credentials invalid
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Forbidden:
+      description: Role or site access denied
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    TooManyRequests:
+      description: Login rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    PreconditionRequired:
+      description: If-Match header is required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+
+  schemas:
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        requestId:
+          type: string
+          nullable: true
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+        clientType:
+          type: string
+          enum: [WEB, MOBILE]
+          default: WEB
+        deviceLabel:
+          type: string
+          nullable: true
+
+    RefreshRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          nullable: true
+        clientType:
+          type: string
+          enum: [WEB, MOBILE]
+          default: WEB
+        deviceLabel:
+          type: string
+          nullable: true
+
+    LogoutRequest:
+      type: object
+      properties:
+        refreshToken:
+          type: string
+          nullable: true
+
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword:
+          type: string
+          format: password
+        newPassword:
+          type: string
+          format: password
+
+    SessionResponse:
+      type: object
+      required: [accessToken, tokenType, expiresIn, mustChangePassword]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+          nullable: true
+        tokenType:
+          type: string
+          example: Bearer
+        expiresIn:
+          type: integer
+          format: int64
+        mustChangePassword:
+          type: boolean
+
+    UserView:
+      type: object
+      required: [id, username, fullName, employeeId, role, active, siteIds, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        username:
+          type: string
+        fullName:
+          type: string
+        employeeId:
+          type: string
+        role:
+          $ref: "#/components/schemas/Role"
+        active:
+          type: boolean
+        siteIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        version:
+          type: integer
+          format: int64
+
+    CreateUserRequest:
+      type: object
+      required: [username, fullName, employeeId, role, initialPassword, siteIds]
+      properties:
+        username:
+          type: string
+        fullName:
+          type: string
+        employeeId:
+          type: string
+        role:
+          $ref: "#/components/schemas/Role"
+        initialPassword:
+          type: string
+          format: password
+        siteIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    UpdateUserRequest:
+      type: object
+      required: [fullName, employeeId, role, siteIds]
+      properties:
+        fullName:
+          type: string
+        employeeId:
+          type: string
+        role:
+          $ref: "#/components/schemas/Role"
+        siteIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    SetUserActiveRequest:
+      type: object
+      required: [active]
+      properties:
+        active:
+          type: boolean
+
+    Role:
+      type: string
+      enum: [ADMINISTRATOR, GENERAL_MANAGER, MANAGER, SUPERVISOR, MECHANIC]
+
+    SiteView:
+      type: object
+      required: [id, code, name, state, timezone, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        state:
+          type: string
+        timezone:
+          type: string
+        version:
+          type: integer
+          format: int64
+
+    CreateSiteRequest:
+      type: object
+      required: [code, name]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        timezone:
+          type: string
+          default: Africa/Kigali
+
+    UpdateSiteRequest:
+      type: object
+      required: [name, timezone, state]
+      properties:
+        name:
+          type: string
+        timezone:
+          type: string
+        state:
+          type: string
+
+    TunnelView:
+      type: object
+      required: [id, siteId, code, name, state, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        state:
+          type: string
+        version:
+          type: integer
+          format: int64
+
+    CreateTunnelRequest:
+      type: object
+      required: [siteId, code, name]
+      properties:
+        siteId:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+
+    UpdateTunnelRequest:
+      type: object
+      required: [code, name, state]
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        state:
+          type: string
+
+    ShiftView:
+      type: object
+      required: [id, code, name, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        version:
+          type: integer
+          format: int64
+
+    UpdateShiftRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+
+    ShiftScheduleView:
+      type: object
+      required: [id, shiftId, shiftCode, startLocal, endLocal, inspectionWindowMinutes, hardBackstopHours, effectiveFrom]
+      properties:
+        id:
+          type: string
+          format: uuid
+        shiftId:
+          type: string
+          format: uuid
+        shiftCode:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+          nullable: true
+        startLocal:
+          type: string
+          example: "06:00"
+        endLocal:
+          type: string
+          example: "14:00"
+        inspectionWindowMinutes:
+          type: integer
+        hardBackstopHours:
+          type: integer
+        effectiveFrom:
+          type: string
+          format: date
+        effectiveTo:
+          type: string
+          format: date
+          nullable: true
+
+    CreateShiftScheduleRequest:
+      type: object
+      required: [shiftCode, startLocal, endLocal, inspectionWindowMinutes, effectiveFrom]
+      properties:
+        shiftCode:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+          nullable: true
+        startLocal:
+          type: string
+        endLocal:
+          type: string
+        inspectionWindowMinutes:
+          type: integer
+        hardBackstopHours:
+          type: integer
+          default: 24
+        effectiveFrom:
+          type: string
+          format: date
+        effectiveTo:
+          type: string
+          format: date
+          nullable: true
+
+    EquipmentTypeView:
+      type: object
+      required: [id, name, source, active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        source:
+          type: string
+        active:
+          type: boolean
+
+    CreateEquipmentTypeRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+
+    PersonnelView:
+      type: object
+      required: [id, employeeId, name, active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+        name:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+          nullable: true
+        tunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        shiftId:
+          type: string
+          format: uuid
+          nullable: true
+        active:
+          type: boolean
+
+    EquipmentSummary:
+      type: object
+      required: [id, assetId, equipmentCode, name, type, siteId, siteName, lifecycleState, operationalStatus, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        assetId:
+          type: string
+        equipmentCode:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+        siteName:
+          type: string
+        tunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        tunnelName:
+          type: string
+          nullable: true
+        lifecycleState:
+          type: string
+        operationalStatus:
+          type: string
+        engineHours:
+          type: number
+          format: double
+          nullable: true
+        version:
+          type: integer
+          format: int64
+
+    CreateEquipmentRequest:
+      type: object
+      required: [assetId, equipmentCode, name, typeId, siteId]
+      properties:
+        assetId:
+          type: string
+        equipmentCode:
+          type: string
+        name:
+          type: string
+        typeId:
+          type: string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        tunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        model:
+          type: string
+          nullable: true
+        serialNumber:
+          type: string
+          nullable: true
+        manufactureYear:
+          type: integer
+          nullable: true
+        engineHoursCurrent:
+          type: string
+          nullable: true
+        requiresDailyInspection:
+          type: boolean
+          default: true
+
+    UpdateEquipmentRequest:
+      type: object
+      required: [equipmentCode, name, typeId]
+      properties:
+        equipmentCode:
+          type: string
+        name:
+          type: string
+        typeId:
+          type: string
+          format: uuid
+        description:
+          type: string
+          nullable: true
+        model:
+          type: string
+          nullable: true
+        serialNumber:
+          type: string
+          nullable: true
+        manufactureYear:
+          type: integer
+          nullable: true
+        engineHoursCurrent:
+          type: string
+          nullable: true
+        requiresDailyInspection:
+          type: boolean
+          default: true
+        lifecycleState:
+          type: string
+          default: ACTIVE
+
+    MovementRequest:
+      type: object
+      required: [destinationSiteId, reason]
+      properties:
+        destinationSiteId:
+          type: string
+          format: uuid
+        destinationTunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        reason:
+          type: string
+
+    RecordStatusRequest:
+      type: object
+      required: [status, occurredAt]
+      properties:
+        status:
+          type: string
+          enum: [OPERATIONAL, UNDER_REPAIR, DOWN]
+        problem:
+          type: string
+          nullable: true
+        actionTaken:
+          type: string
+          nullable: true
+        partsRequired:
+          type: string
+          nullable: true
+        remarks:
+          type: string
+          nullable: true
+        tunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        shiftId:
+          type: string
+          format: uuid
+          nullable: true
+        occurredAt:
+          type: string
+          format: date-time
+
+    StatusEventView:
+      type: object
+      required: [id, equipmentId, sequence, newStatus, siteId, userId, userEid, occurredAt, recordedAt, source]
+      properties:
+        id:
+          type: string
+          format: uuid
+        equipmentId:
+          type: string
+          format: uuid
+        sequence:
+          type: integer
+          format: int64
+        previousStatus:
+          type: string
+          nullable: true
+        newStatus:
+          type: string
+        problem:
+          type: string
+          nullable: true
+        actionTaken:
+          type: string
+          nullable: true
+        partsRequired:
+          type: string
+          nullable: true
+        remarks:
+          type: string
+          nullable: true
+        siteId:
+          type: string
+          format: uuid
+        tunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        shiftId:
+          type: string
+          format: uuid
+          nullable: true
+        userId:
+          type: string
+          format: uuid
+        userEid:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        recordedAt:
+          type: string
+          format: date-time
+        source:
+          type: string
+
+    StatusResult:
+      type: object
+      required: [event, equipmentVersion, projected]
+      properties:
+        event:
+          $ref: "#/components/schemas/StatusEventView"
+        equipmentVersion:
+          type: integer
+          format: int64
+        projected:
+          type: boolean
+
+    ImportProfileView:
+      type: object
+      required: [id, name, kind, columnMapping, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          type: string
+          enum: [EQUIPMENT, TECHNICIANS, OPERATORS]
+        sheetName:
+          type: string
+          nullable: true
+        columnMapping:
+          type: object
+          additionalProperties:
+            type: string
+        version:
+          type: integer
+          format: int64
+
+    CreateImportProfileRequest:
+      type: object
+      required: [name, kind, columnMapping]
+      properties:
+        name:
+          type: string
+        kind:
+          type: string
+          enum: [EQUIPMENT, TECHNICIANS, OPERATORS]
+        sheetName:
+          type: string
+          nullable: true
+        columnMapping:
+          type: object
+          additionalProperties:
+            type: string
+
+    ImportBatchView:
+      type: object
+      required: [id, state, fileSha256, newCount, updatedCount, unchangedCount, rejectedCount]
+      properties:
+        id:
+          type: string
+          format: uuid
+        state:
+          type: string
+        fileSha256:
+          type: string
+        newCount:
+          type: integer
+        updatedCount:
+          type: integer
+        unchangedCount:
+          type: integer
+        rejectedCount:
+          type: integer
+        newEquipmentTypes:
+          type: array
+          items:
+            type: string
+
+    ImportRowView:
+      type: object
+      required: [rowNumber, state, warnings]
+      properties:
+        rowNumber:
+          type: integer
+        businessKey:
+          type: string
+          nullable: true
+        state:
+          type: string
+        rejectionReason:
+          type: string
+          nullable: true
+        warnings:
+          type: array
+          items:
+            type: string
+
+    ImportRowsPage:
+      type: object
+      required: [batch, rows]
+      properties:
+        batch:
+          $ref: "#/components/schemas/ImportBatchView"
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/ImportRowView"
+        nextRowNumber:
+          type: integer
+          nullable: true
+
+    CommitImportRequest:
+      type: object
+      properties:
+        applyUpdates:
+          type: boolean
+          default: false

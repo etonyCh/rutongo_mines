@@ -4,7 +4,7 @@ Kotlin monolith for mining equipment maintenance workflows. The implementation f
 
 ## Current scope
 
-Sprint 0 foundation, Sprint 1 identity/security, Sprint 2 organization/equipment/import and Sprint 3 status/history backend: Gradle multi-project, Ktor API, PostgreSQL/Flyway, hash-chained audit, login and session rotation, site-scoped roles, organization references, equipment directory and movements, configurable Excel imports, status event history and optimistic status updates, Active Problems, and a site-scoped SSE event stream. Gradle build and database integration tests pass locally; the Sprint 3 CI run remains to be confirmed.
+Sprint 0 foundation, Sprint 1 identity/security, Sprint 2 organization/equipment/import and Sprint 3 status/history backend: Gradle multi-project, Ktor API, PostgreSQL/Flyway, hash-chained audit, login and session rotation, site-scoped roles, organization references, equipment directory and movements, configurable Excel imports, status event history and optimistic status updates, Active Problems, and a site-scoped SSE event stream. The Sprint 3 acceptance tests cover projection, idempotent replay, version conflicts, immutable history, historical ordering, site scope, restart persistence, Active Problems and SSE cursors. Gradle build and database integration tests pass locally.
 
 ## Run locally
 
@@ -27,3 +27,5 @@ Administrators create import profiles at `/api/v1/import-profiles`, mapping doma
 Status updates use `POST /api/v1/equipment/{id}/status` with `If-Match` set to the equipment version and an `Idempotency-Key` header. The stored statuses are `OPERATIONAL`, `UNDER_REPAIR` and `DOWN`; `OPERATIONAL_WITH_DEFECTS` is derived for display and cannot be written. Events are append-only and site-scoped, and a late event is retained in history without regressing the current equipment projection. Repeating an `Idempotency-Key` returns the original event without appending another.
 
 Status history is available at `/api/v1/equipment/{id}/status-events`; active `DOWN` and `UNDER_REPAIR` equipment is listed at `/api/v1/active-problems`, optionally filtered with `siteId`. Authenticated clients can subscribe to `/api/v1/events` using Server-Sent Events; send `Last-Event-ID` as `<recordedAt>|<eventId>` to resume after the last delivered event. Streams only include events for sites the caller may access.
+
+The current HTTP contract is documented in [`docs/openapi.yaml`](docs/openapi.yaml). It covers authentication, users, organization, equipment, status and import endpoints, including `If-Match`, `Idempotency-Key`, error responses and SSE resumption headers. CI validates the contract with Redocly and publishes the generated reference as a build artifact. CI also enforces `ktlint`, `detekt` with per-module baselines, Konsist architecture rules and at least 95% line coverage for the Sprint 3 status service and domain package.

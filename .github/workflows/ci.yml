@@ -16,3 +16,14 @@ jobs:
         with:
           gradle-version: '8.13'
       - run: gradle build --no-daemon
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate OpenAPI contract
+        run: npx --yes @redocly/cli@2.76.0 lint docs/openapi.yaml
+      - name: Build API reference
+        run: npx --yes @redocly/cli@2.76.0 build-docs docs/openapi.yaml -o build/openapi/index.html
+      - uses: actions/upload-artifact@v4
+        with:
+          name: openapi-reference
+          path: build/openapi
