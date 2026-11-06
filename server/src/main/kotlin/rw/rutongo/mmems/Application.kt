@@ -20,6 +20,11 @@ import rw.rutongo.mmems.modules.equipment.EquipmentService
 import rw.rutongo.mmems.modules.equipment.equipmentRoutes
 import rw.rutongo.mmems.modules.importer.ImportService
 import rw.rutongo.mmems.modules.importer.importRoutes
+import rw.rutongo.mmems.modules.inspection.GenerateExpectationsJob
+import rw.rutongo.mmems.modules.inspection.InspectionScheduler
+import rw.rutongo.mmems.modules.inspection.InspectionService
+import rw.rutongo.mmems.modules.inspection.MarkMissingJob
+import rw.rutongo.mmems.modules.inspection.inspectionRoutes
 import rw.rutongo.mmems.modules.status.StatusService
 import rw.rutongo.mmems.modules.status.statusRoutes
 import rw.rutongo.mmems.platform.BlobStore
@@ -36,6 +41,7 @@ data class ApiError(
     val requestId: String? = null,
 )
 
+@Suppress("LongMethod")
 fun Application.module() {
     val dataSource =
         HikariDataSource(
@@ -52,12 +58,18 @@ fun Application.module() {
         .locations("classpath:db/migration")
         .load()
         .migrate()
-    environment.monitor.subscribe(ApplicationStopped) { dataSource.close() }
     val signer = TokenSigner.fromEnvironment()
     val identity = IdentityService(dataSource, signer)
     val equipment = EquipmentService(dataSource)
     val importer = ImportService(dataSource)
     val statuses = StatusService(dataSource)
+    val inspections = InspectionService(dataSource)
+    val inspectionScheduler = InspectionScheduler(dataSource, GenerateExpectationsJob(dataSource), MarkMissingJob(dataSource))
+    environment.monitor.subscribe(ApplicationStarted) { inspectionScheduler.start() }
+    environment.monitor.subscribe(ApplicationStopped) {
+        inspectionScheduler.stop()
+        dataSource.close()
+    }
     install(Koin) {
         modules(
             koinModule {
@@ -68,6 +80,7 @@ fun Application.module() {
                 single { equipment }
                 single { importer }
                 single { statuses }
+                single { inspections }
             },
         )
     }
@@ -89,6 +102,7 @@ fun Application.module() {
         equipmentRoutes(equipment, identity, signer)
         importRoutes(importer, identity, signer)
         statusRoutes(statuses, identity, signer)
+        inspectionRoutes(inspections, identity, signer)
     }
 }
 

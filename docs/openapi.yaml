@@ -19,6 +19,8 @@ tags:
   - name: Equipment
   - name: Status
   - name: Imports
+  - name: Inspections
+  - name: Defects
 
 paths:
   /health:
@@ -956,6 +958,335 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /api/v1/inspections/expected:
+    get:
+      tags: [Inspections]
+      summary: List open inspection expectations visible to the caller
+      parameters:
+        - $ref: "#/components/parameters/SiteIdQuery"
+      responses:
+        "200":
+          description: Open expectations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExpectedInspectionView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v1/inspections/control:
+    get:
+      tags: [Inspections]
+      summary: List inspection expectations for daily control
+      parameters:
+        - name: reportDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - $ref: "#/components/parameters/SiteIdQuery"
+      responses:
+        "200":
+          description: Expectations for the period
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExpectedInspectionView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v1/inspections:
+    post:
+      tags: [Inspections]
+      summary: Submit an inspection
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InspectionSubmitRequest"
+      responses:
+        "201":
+          description: Inspection submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InspectionDetailView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Expectation mismatch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/inspections/{id}:
+    get:
+      tags: [Inspections]
+      summary: Return an inspection with frozen answers and defects
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Inspection detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InspectionDetailView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/inspection-drafts/{equipmentId}:
+    put:
+      tags: [Inspections]
+      summary: Save an inspection draft
+      parameters:
+        - name: equipmentId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InspectionDraftRequest"
+      responses:
+        "200":
+          description: Draft saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InspectionDraftView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v1/checklist-items:
+    get:
+      tags: [Inspections]
+      summary: List checklist items
+      parameters:
+        - name: active
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        "200":
+          description: Checklist items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChecklistItemView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Inspections]
+      summary: Create a checklist item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChecklistItemRequest"
+      responses:
+        "201":
+          description: Checklist item created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChecklistItemView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v1/checklist-items/{id}:
+    put:
+      tags: [Inspections]
+      summary: Update a checklist item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChecklistItemRequest"
+      responses:
+        "200":
+          description: Checklist item updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChecklistItemView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/inspections/{id}/corrections:
+    post:
+      tags: [Inspections]
+      summary: Request a correction to an inspection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InspectionCorrectionRequest"
+      responses:
+        "201":
+          description: Correction requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InspectionCorrectionView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/corrections/{id}/decision:
+    post:
+      tags: [Inspections]
+      summary: Approve or reject an inspection correction
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InspectionCorrectionDecision"
+      responses:
+        "200":
+          description: Decision recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InspectionCorrectionView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Correction already decided
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/defects:
+    get:
+      tags: [Defects]
+      summary: List defects visible to the caller
+      parameters:
+        - name: equipmentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: state
+          in: query
+          schema:
+            type: string
+            enum: [OPEN, IN_REPAIR, RESOLVED, CLOSED]
+      responses:
+        "200":
+          description: Defects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DefectView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v1/defects/{id}:
+    patch:
+      tags: [Defects]
+      summary: Update a defect state or severity
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DefectPatchRequest"
+      responses:
+        "200":
+          description: Defect updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DefectView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1584,6 +1915,10 @@ components:
         occurredAt:
           type: string
           format: date-time
+        overrideReason:
+          type: string
+          nullable: true
+          description: Required when a STATUS_OVERRIDE permission reverses an automatic SYSTEM_RULE status.
 
     StatusEventView:
       type: object
@@ -1639,6 +1974,9 @@ components:
           format: date-time
         source:
           type: string
+        overrideReason:
+          type: string
+          nullable: true
 
     StatusResult:
       type: object
@@ -1755,3 +2093,477 @@ components:
         applyUpdates:
           type: boolean
           default: false
+
+    InspectionDefectRequest:
+      type: object
+      required: [severity]
+      properties:
+        description:
+          type: string
+          nullable: true
+        severity:
+          type: string
+          enum: [MINOR, MAJOR, CRITICAL]
+        immediateAction:
+          type: string
+          nullable: true
+
+    InspectionAnswerRequest:
+      type: object
+      required: [itemId, answer]
+      properties:
+        itemId:
+          type: string
+          format: uuid
+        answer:
+          type: string
+          enum: [PASS, FAIL, NA]
+        naReason:
+          type: string
+          nullable: true
+        defect:
+          $ref: "#/components/schemas/InspectionDefectRequest"
+        photoIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    InspectionAttestationRequest:
+      type: object
+      required: [name, employeeId, method]
+      properties:
+        name:
+          type: string
+        employeeId:
+          type: string
+        method:
+          type: string
+        fingerprint:
+          type: string
+          nullable: true
+        signature:
+          type: string
+          nullable: true
+
+    InspectionSubmitRequest:
+      type: object
+      required: [clientUuid, equipmentId, shiftId, reportDate, capturedAt, startedAt, answers]
+      properties:
+        clientUuid:
+          type: string
+          format: uuid
+        expectationId:
+          type: string
+          format: uuid
+          nullable: true
+        equipmentId:
+          type: string
+          format: uuid
+        shiftId:
+          type: string
+          format: uuid
+        reportDate:
+          type: string
+          format: date
+        operatorId:
+          type: string
+          format: uuid
+          nullable: true
+        operatorEid:
+          type: string
+          nullable: true
+        supervisorId:
+          type: string
+          format: uuid
+          nullable: true
+        engineHoursStart:
+          type: number
+          format: double
+          nullable: true
+        engineHoursEnd:
+          type: number
+          format: double
+          nullable: true
+        fuelStartPercent:
+          type: number
+          format: double
+          nullable: true
+        fuelAddedLitres:
+          type: number
+          format: double
+          nullable: true
+        capturedAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        attestation:
+          $ref: "#/components/schemas/InspectionAttestationRequest"
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/InspectionAnswerRequest"
+
+    InspectionSummaryView:
+      type: object
+      required: [id, clientUuid, equipmentId, siteId, shiftId, reportDate, inspectorId, inspectorEid, result, submittedLate, hoursWarnings, capturedAt, startedAt, submittedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        clientUuid:
+          type: string
+          format: uuid
+        expectationId:
+          type: string
+          format: uuid
+          nullable: true
+        equipmentId:
+          type: string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        tunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        shiftId:
+          type: string
+          format: uuid
+        reportDate:
+          type: string
+          format: date
+        operatorId:
+          type: string
+          format: uuid
+          nullable: true
+        operatorEid:
+          type: string
+          nullable: true
+        inspectorId:
+          type: string
+          format: uuid
+        inspectorEid:
+          type: string
+        supervisorId:
+          type: string
+          format: uuid
+          nullable: true
+        engineHoursStart:
+          type: number
+          nullable: true
+        engineHoursEnd:
+          type: number
+          nullable: true
+        fuelStartPercent:
+          type: number
+          nullable: true
+        fuelAddedLitres:
+          type: number
+          nullable: true
+        result:
+          type: string
+          enum: [COMPLETED, COMPLETED_WITH_DEFECTS, CRITICAL_FAILURE]
+        submittedLate:
+          type: boolean
+        hoursWarnings:
+          type: array
+          items:
+            type: string
+        capturedAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+        submittedAt:
+          type: string
+          format: date-time
+
+    InspectionAnswerView:
+      type: object
+      required: [itemId, category, label, answer, photoIds]
+      properties:
+        itemId:
+          type: string
+          format: uuid
+        category:
+          type: string
+          enum: [SAFETY, MECHANICAL]
+        label:
+          type: string
+        answer:
+          type: string
+          enum: [PASS, FAIL, NA]
+        naReason:
+          type: string
+          nullable: true
+        defectId:
+          type: string
+          format: uuid
+          nullable: true
+        photoIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    DefectView:
+      type: object
+      required: [id, equipmentId, category, description, severity, state, reportedBy, reportedAt, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        equipmentId:
+          type: string
+          format: uuid
+        inspectionId:
+          type: string
+          format: uuid
+          nullable: true
+        checklistItemId:
+          type: string
+          format: uuid
+          nullable: true
+        category:
+          type: string
+        description:
+          type: string
+        severity:
+          type: string
+          enum: [MINOR, MAJOR, CRITICAL]
+        immediateAction:
+          type: string
+          nullable: true
+        state:
+          type: string
+          enum: [OPEN, IN_REPAIR, RESOLVED, CLOSED]
+        reportedBy:
+          type: string
+          format: uuid
+        reportedAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        resolvedBy:
+          type: string
+          format: uuid
+          nullable: true
+        version:
+          type: integer
+          format: int64
+
+    InspectionDetailView:
+      type: object
+      required: [inspection, answers, defects]
+      properties:
+        inspection:
+          $ref: "#/components/schemas/InspectionSummaryView"
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/InspectionAnswerView"
+        defects:
+          type: array
+          items:
+            $ref: "#/components/schemas/DefectView"
+
+    ExpectedInspectionView:
+      type: object
+      required: [id, equipmentId, equipmentCode, equipmentName, siteId, siteName, shiftId, shiftCode, reportDate, windowStart, windowEnd, state]
+      properties:
+        id:
+          type: string
+          format: uuid
+        equipmentId:
+          type: string
+          format: uuid
+        equipmentCode:
+          type: string
+        equipmentName:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+        siteName:
+          type: string
+        shiftId:
+          type: string
+          format: uuid
+        shiftCode:
+          type: string
+        reportDate:
+          type: string
+          format: date
+        windowStart:
+          type: string
+          format: date-time
+        windowEnd:
+          type: string
+          format: date-time
+        state:
+          type: string
+          enum: [NOT_STARTED, IN_PROGRESS, COMPLETED, COMPLETED_WITH_DEFECTS, CRITICAL_FAILURE, MISSING]
+        missingMarkedAt:
+          type: string
+          format: date-time
+          nullable: true
+        inspectionId:
+          type: string
+          format: uuid
+          nullable: true
+
+    InspectionDraftRequest:
+      type: object
+      required: [payload]
+      properties:
+        expectationId:
+          type: string
+          format: uuid
+          nullable: true
+        payload:
+          type: object
+          additionalProperties: true
+
+    InspectionDraftView:
+      type: object
+      required: [id, equipmentId, userId, payload, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        expectationId:
+          type: string
+          format: uuid
+          nullable: true
+        equipmentId:
+          type: string
+          format: uuid
+        userId:
+          type: string
+          format: uuid
+        payload:
+          type: string
+        updatedAt:
+          type: string
+          format: date-time
+
+    ChecklistItemRequest:
+      type: object
+      required: [category, code, label, sortOrder]
+      properties:
+        category:
+          type: string
+          enum: [SAFETY, MECHANICAL]
+        code:
+          type: string
+        label:
+          type: string
+        sortOrder:
+          type: integer
+        mandatory:
+          type: boolean
+          default: true
+        safetyCritical:
+          type: boolean
+          default: false
+        photoRequiredOnFail:
+          type: boolean
+          default: false
+        naReasonRequired:
+          type: boolean
+          default: true
+        active:
+          type: boolean
+          default: true
+
+    ChecklistItemView:
+      allOf:
+        - $ref: "#/components/schemas/ChecklistItemRequest"
+        - type: object
+          required: [id]
+          properties:
+            id:
+              type: string
+              format: uuid
+
+    InspectionCorrectionRequest:
+      type: object
+      required: [changes, reason]
+      properties:
+        changes:
+          type: object
+          additionalProperties: true
+        reason:
+          type: string
+
+    InspectionCorrectionDecision:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [APPROVED, REJECTED]
+        comment:
+          type: string
+          nullable: true
+
+    InspectionCorrectionView:
+      type: object
+      required: [id, inspectionId, changes, reason, requestedBy, requestedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        inspectionId:
+          type: string
+          format: uuid
+        changes:
+          type: string
+        reason:
+          type: string
+        requestedBy:
+          type: string
+          format: uuid
+        requestedAt:
+          type: string
+          format: date-time
+        decision:
+          type: string
+          enum: [APPROVED, REJECTED]
+          nullable: true
+        decidedBy:
+          type: string
+          format: uuid
+          nullable: true
+        decidedAt:
+          type: string
+          format: date-time
+          nullable: true
+        decisionComment:
+          type: string
+          nullable: true
+
+    DefectPatchRequest:
+      type: object
+      required: [version]
+      properties:
+        state:
+          type: string
+          enum: [OPEN, IN_REPAIR, RESOLVED, CLOSED]
+        severity:
+          type: string
+          enum: [MINOR, MAJOR, CRITICAL]
+        immediateAction:
+          type: string
+          nullable: true
+        version:
+          type: integer
+          format: int64

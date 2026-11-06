@@ -25,6 +25,7 @@ import java.util.UUID
     val tunnelId: String? = null,
     val shiftId: String? = null,
     val occurredAt: String,
+    val overrideReason: String? = null,
 )
 
 fun Route.statusRoutes(
@@ -35,7 +36,7 @@ fun Route.statusRoutes(
     route("/api/v1") {
         post("/equipment/{id}/status") {
             val actor = call.authenticated(identity, signer) ?: return@post
-            if (!RolePermissions.allows(actor.role, "STATUS_UPDATE")) {
+            if (!RolePermissions.allows(actor.role, "STATUS_UPDATE") && !RolePermissions.allows(actor.role, "STATUS_OVERRIDE")) {
                 call.respond(HttpStatusCode.Forbidden, ApiError("FORBIDDEN", "You are not allowed to update equipment status."))
                 return@post
             }
@@ -64,13 +65,13 @@ fun Route.statusRoutes(
                         call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_OCCURRED_AT", "occurredAt must be an ISO-8601 instant."))
                         return@post
                     }
-                call.respond(HttpStatusCode.Created, service.record(actor, id, version, key, body.status, body.problem, body.actionTaken, body.partsRequired, body.remarks, body.tunnelId?.let(UUID::fromString), body.shiftId?.let(UUID::fromString), occurredAt))
+                call.respond(HttpStatusCode.Created, service.record(actor, id, version, key, body.status, body.problem, body.actionTaken, body.partsRequired, body.remarks, body.tunnelId?.let(UUID::fromString), body.shiftId?.let(UUID::fromString), occurredAt, body.overrideReason))
             } catch (e: IllegalArgumentException) {
                 call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_STATUS_CHANGE", e.message ?: "The status change is invalid."))
             } catch (e: rw.rutongo.mmems.identity.AuthFailure) {
                 val status =
                     when (e.code) {
-                        "FORBIDDEN", "SITE_NOT_AUTHORIZED", "IDEMPOTENCY_KEY_REPLAY_FORBIDDEN" -> HttpStatusCode.Forbidden
+                        "FORBIDDEN", "SITE_NOT_AUTHORIZED", "IDEMPOTENCY_KEY_REPLAY_FORBIDDEN", "STATUS_OVERRIDE_REQUIRED" -> HttpStatusCode.Forbidden
                         "EQUIPMENT_NOT_FOUND", "SHIFT_NOT_FOUND", "TUNNEL_NOT_IN_SITE" -> HttpStatusCode.NotFound
                         "EQUIPMENT_VERSION_CONFLICT" -> HttpStatusCode.Conflict
                         else -> HttpStatusCode.BadRequest

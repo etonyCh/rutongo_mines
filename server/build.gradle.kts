@@ -27,6 +27,7 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql:11.3.4")
     implementation("org.postgresql:postgresql:42.7.5")
     implementation("com.zaxxer:HikariCP:6.2.1")
+    implementation("com.github.kagkarlsson:db-scheduler:16.12.0")
     implementation("org.jetbrains.exposed:exposed-core:0.59.0")
     implementation("org.jetbrains.exposed:exposed-jdbc:0.59.0")
     implementation("org.apache.poi:poi-ooxml:5.4.1")

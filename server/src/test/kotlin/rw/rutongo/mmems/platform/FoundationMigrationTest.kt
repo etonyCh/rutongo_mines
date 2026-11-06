@@ -44,6 +44,10 @@ class FoundationMigrationTest {
                         rs.next()
                         assertEquals(6, rs.getInt(1))
                     }
+                    statement.executeQuery("select count(*) from scheduled_tasks").use { rs ->
+                        rs.next()
+                        assertEquals(0, rs.getInt(1))
+                    }
                     statement.executeUpdate("insert into audit_event(action,entity_type,entity_id,occurred_at,metadata,event_hash) values ('TEST_ONE','test','1',now(),'{}',decode('00','hex'))")
                     statement.executeUpdate("insert into audit_event(action,entity_type,entity_id,occurred_at,metadata,event_hash) values ('TEST_TWO','test','2',now(),'{}',decode('00','hex'))")
                     statement.executeQuery("select previous_hash,event_hash from audit_event where action in ('TEST_ONE','TEST_TWO') order by audit_sequence").use { rs ->

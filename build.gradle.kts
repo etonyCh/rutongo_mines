@@ -15,5 +15,7 @@ subprojects {
         jvmTarget = "21"
         parallel = true
         baseline = file("$projectDir/detekt-baseline.xml")
+        config.setFrom(files("$rootDir/config/detekt/detekt.yml"))
+        buildUponDefaultConfig = true
     }
 }

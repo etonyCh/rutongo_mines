@@ -31,6 +31,7 @@ import javax.sql.DataSource
     val occurredAt: String,
     val recordedAt: String,
     val source: String,
+    val overrideReason: String?,
 )
 
 @Serializable data class StatusResult(
@@ -42,6 +43,7 @@ import javax.sql.DataSource
 class StatusService(
     private val dataSource: DataSource,
 ) {
+    @Suppress("LongParameterList", "LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth", "ReturnCount", "ThrowsCount", "MagicNumber")
     fun record(
         actor: Principal,
         equipmentId: UUID,
@@ -55,6 +57,7 @@ class StatusService(
         tunnelId: UUID?,
         shiftId: UUID?,
         occurredAt: Instant,
+        overrideReason: String? = null,
     ): StatusResult {
         require(idempotencyKey.isNotBlank() && idempotencyKey.length <= 200) { "A valid Idempotency-Key is required" }
         val errors = StatusPolicy.validate(StatusChangeInput(newStatus, problem, actionTaken))
@@ -67,19 +70,33 @@ class StatusService(
                     return it
                 }
                 val equipment =
-                    c.prepareStatement("select e.site_id,e.tunnel_id,e.current_status,e.version,u.employee_id from equipment e join app_user u on u.id=? where e.id=? for update of e").use { ps ->
+                    c.prepareStatement("select e.site_id,e.tunnel_id,e.current_status,e.version,e.current_status_event_id,ev.source current_source,u.employee_id from equipment e left join equipment_status_event ev on ev.id=e.current_status_event_id join app_user u on u.id=? where e.id=? for update of e").use { ps ->
                         ps.setObject(1, actor.id)
                         ps.setObject(2, equipmentId)
                         ps.executeQuery().use { rs ->
                             if (!rs.next()) throw AuthFailure("EQUIPMENT_NOT_FOUND")
-                            EquipmentLock(rs.getObject(1, UUID::class.java), rs.getObject(2, UUID::class.java), rs.getString(3), rs.getLong(4), rs.getString(5))
+                            EquipmentLock(
+                                rs.getObject(1, UUID::class.java),
+                                rs.getObject(2, UUID::class.java),
+                                rs.getString(3),
+                                rs.getLong(4),
+                                rs.getObject(5, UUID::class.java),
+                                rs.getString(6),
+                                rs.getString(7),
+                            )
                         }
                     }
                 replay(c, actor, idempotencyKey)?.let {
                     c.rollback()
                     return it
                 }
-                if (!RolePermissions.allows(actor.role, "STATUS_UPDATE")) throw AuthFailure("FORBIDDEN")
+                val overridingSystemRule = equipment.source == "SYSTEM_RULE" && newStatus.name != equipment.status
+                if (overridingSystemRule) {
+                    if (!RolePermissions.allows(actor.role, "STATUS_OVERRIDE")) throw AuthFailure("STATUS_OVERRIDE_REQUIRED")
+                    require(!overrideReason.isNullOrBlank()) { "An override reason is required to contradict an automatic status rule." }
+                } else if (!RolePermissions.allows(actor.role, "STATUS_UPDATE")) {
+                    throw AuthFailure("FORBIDDEN")
+                }
                 if (!hasSiteAccess(c, actor, equipment.siteId)) throw AuthFailure("SITE_NOT_AUTHORIZED")
                 if (equipment.version != expectedVersion) throw AuthFailure("EQUIPMENT_VERSION_CONFLICT")
                 val effectiveTunnel = tunnelId ?: equipment.tunnelId
@@ -94,7 +111,7 @@ class StatusService(
                         }
                     }
                 val id = UUID.randomUUID()
-                c.prepareStatement("""insert into equipment_status_event(id,equipment_id,seq,previous_status,new_status,problem,action_taken,parts_required,remarks,site_id,tunnel_id,shift_id,user_id,user_eid,occurred_at,recorded_at,source,idempotency_key) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,clock_timestamp(),'MANUAL',?)""").use { ps ->
+                c.prepareStatement("""insert into equipment_status_event(id,equipment_id,seq,previous_status,new_status,problem,action_taken,parts_required,remarks,site_id,tunnel_id,shift_id,user_id,user_eid,occurred_at,recorded_at,source,override_reason,idempotency_key) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,clock_timestamp(),'MANUAL',?,?)""").use { ps ->
                     ps.setObject(1, id)
                     ps.setObject(2, equipmentId)
                     ps.setLong(3, seq)
@@ -110,7 +127,8 @@ class StatusService(
                     ps.setObject(13, actor.id)
                     ps.setString(14, equipment.employeeId)
                     ps.setTimestamp(15, Timestamp.from(occurredAt))
-                    ps.setString(16, idempotencyKey)
+                    ps.setString(16, overrideReason?.trim())
+                    ps.setString(17, idempotencyKey)
                     ps.executeUpdate()
                 }
                 val latest =
@@ -139,7 +157,7 @@ class StatusService(
                 c.prepareStatement("insert into audit_event(actor_id,action,entity_type,entity_id,occurred_at,metadata,event_hash) values (?,'EQUIPMENT_STATUS_CHANGED','equipment',?,now(),?::jsonb,?)").use { ps ->
                     ps.setObject(1, actor.id)
                     ps.setString(2, equipmentId.toString())
-                    ps.setString(3, "{\"status\":\"${newStatus.name}\",\"eventId\":\"$id\"}")
+                    ps.setString(3, "{\"status\":\"${newStatus.name}\",\"eventId\":\"$id\",\"override\":$overridingSystemRule}")
                     ps.setBytes(
                         4,
                         java.security.MessageDigest
@@ -290,13 +308,15 @@ class StatusService(
             }
         }
 
-    private fun java.sql.ResultSet.toView() = StatusEventView(getObject("id", UUID::class.java).toString(), getObject("equipment_id", UUID::class.java).toString(), getLong("seq"), getString("previous_status"), getString("new_status"), getString("problem"), getString("action_taken"), getString("parts_required"), getString("remarks"), getObject("site_id", UUID::class.java).toString(), getObject("tunnel_id", UUID::class.java)?.toString(), getObject("shift_id", UUID::class.java)?.toString(), getObject("user_id", UUID::class.java).toString(), getString("user_eid"), getTimestamp("occurred_at").toInstant().toString(), getTimestamp("recorded_at").toInstant().toString(), getString("source"))
+    private fun java.sql.ResultSet.toView() = StatusEventView(getObject("id", UUID::class.java).toString(), getObject("equipment_id", UUID::class.java).toString(), getLong("seq"), getString("previous_status"), getString("new_status"), getString("problem"), getString("action_taken"), getString("parts_required"), getString("remarks"), getObject("site_id", UUID::class.java).toString(), getObject("tunnel_id", UUID::class.java)?.toString(), getObject("shift_id", UUID::class.java)?.toString(), getObject("user_id", UUID::class.java).toString(), getString("user_eid"), getTimestamp("occurred_at").toInstant().toString(), getTimestamp("recorded_at").toInstant().toString(), getString("source"), getString("override_reason"))
 
     private data class EquipmentLock(
         val siteId: UUID,
         val tunnelId: UUID?,
         val status: String?,
         val version: Long,
+        val statusEventId: UUID?,
+        val source: String?,
         val employeeId: String,
     )
 
