@@ -1,11 +1,11 @@
 pluginManagement {
-    repositories { gradlePluginPortal(); mavenCentral() }
+    repositories { google(); gradlePluginPortal(); mavenCentral() }
 }
 
 dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
-    repositories { mavenCentral() }
+    repositories { google(); mavenCentral() }
 }
 
 rootProject.name = "rutongo-mmems"
-include(":server", ":shared")
+include(":server", ":shared", ":androidApp")

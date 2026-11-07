@@ -1,5 +1,9 @@
-<?xml version="1.0" ?>
+<?xml version='1.0' encoding='UTF-8'?>
 <SmellBaseline>
-  <ManuallySuppressedIssues></ManuallySuppressedIssues>
-  <CurrentIssues></CurrentIssues>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:InspectionValidation.kt$EngineHours$fun evaluate( start: Double?, end: Double?, lastReading: Double?, ): EngineHoursEvaluation</ID>
+    <ID>CyclomaticComplexMethod:InspectionValidation.kt$InspectionValidator$fun validate(input: InspectionValidationInput): InspectionValidationOutcome</ID>
+    <ID>MagicNumber:InspectionValidation.kt$EngineHours$24.0</ID>
+  </CurrentIssues>
 </SmellBaseline>

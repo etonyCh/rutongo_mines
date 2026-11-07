@@ -16,6 +16,10 @@ jobs:
         with:
           gradle-version: '8.13'
       - run: gradle build --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-debug-apk
+          path: androidApp/build/outputs/apk/debug/*.apk
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

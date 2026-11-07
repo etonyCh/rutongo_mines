@@ -25,6 +25,8 @@ import rw.rutongo.mmems.modules.inspection.InspectionScheduler
 import rw.rutongo.mmems.modules.inspection.InspectionService
 import rw.rutongo.mmems.modules.inspection.MarkMissingJob
 import rw.rutongo.mmems.modules.inspection.inspectionRoutes
+import rw.rutongo.mmems.modules.photo.PhotoService
+import rw.rutongo.mmems.modules.photo.photoRoutes
 import rw.rutongo.mmems.modules.status.StatusService
 import rw.rutongo.mmems.modules.status.statusRoutes
 import rw.rutongo.mmems.platform.BlobStore
@@ -64,6 +66,8 @@ fun Application.module() {
     val importer = ImportService(dataSource)
     val statuses = StatusService(dataSource)
     val inspections = InspectionService(dataSource)
+    val blobStore = PrivateFileBlobStore(Path.of(System.getenv("BLOB_STORAGE_DIR") ?: "data/blobs"))
+    val photos = PhotoService(dataSource, blobStore)
     val inspectionScheduler = InspectionScheduler(dataSource, GenerateExpectationsJob(dataSource), MarkMissingJob(dataSource))
     environment.monitor.subscribe(ApplicationStarted) { inspectionScheduler.start() }
     environment.monitor.subscribe(ApplicationStopped) {
@@ -74,13 +78,14 @@ fun Application.module() {
         modules(
             koinModule {
                 single<Clock> { Clock { Instant.now() } }
-                single<BlobStore> { PrivateFileBlobStore(Path.of(System.getenv("BLOB_STORAGE_DIR") ?: "data/blobs")) }
+                single<BlobStore> { blobStore }
                 single { identity }
                 single { signer }
                 single { equipment }
                 single { importer }
                 single { statuses }
                 single { inspections }
+                single { photos }
             },
         )
     }
@@ -103,6 +108,7 @@ fun Application.module() {
         importRoutes(importer, identity, signer)
         statusRoutes(statuses, identity, signer)
         inspectionRoutes(inspections, identity, signer)
+        photoRoutes(photos, identity, signer)
     }
 }
 

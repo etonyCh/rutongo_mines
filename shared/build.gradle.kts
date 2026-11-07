@@ -1,18 +1,30 @@
 plugins {
     kotlin("multiplatform")
     kotlin("plugin.serialization")
+    id("com.android.library")
     id("org.jlleitschuh.gradle.ktlint")
     id("io.gitlab.arturbosch.detekt")
 }
 
 kotlin {
     jvm()
+    androidTarget()
     sourceSets {
         commonMain.dependencies {
             implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
             implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.2")
         }
         commonTest.dependencies { implementation(kotlin("test")) }
+    }
+}
+
+android {
+    namespace = "rw.rutongo.mmems.shared"
+    compileSdk = 36
+    defaultConfig { minSdk = 26 }
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 }
 

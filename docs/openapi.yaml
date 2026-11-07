@@ -1052,6 +1052,87 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /api/v1/photos:
+    post:
+      tags: [Photos]
+      summary: Upload inspection or maintenance photo evidence
+      description: Accepts JPEG or PNG files up to 10 MiB. The stored content type is derived from the file signature, not the multipart declaration.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [siteId, targetType, targetId, file]
+              properties:
+                siteId:
+                  type: string
+                  format: uuid
+                targetType:
+                  type: string
+                  enum: [EQUIPMENT, INSPECTION_ANSWER, DEFECT, BREAKDOWN, MAINTENANCE, STATUS_EVENT]
+                targetId:
+                  type: string
+                  format: uuid
+                kind:
+                  type: string
+                  enum: [EVIDENCE, BEFORE, AFTER]
+                  default: EVIDENCE
+                photoId:
+                  type: string
+                  format: uuid
+                  description: Client-generated identifier used to reference the photo from an offline inspection.
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "201":
+          description: Photo stored
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PhotoView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "413":
+          description: Photo exceeds 10 MiB
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/photos/{id}:
+    get:
+      tags: [Photos]
+      summary: Read a site-scoped photo
+      parameters:
+        - $ref: "#/components/parameters/PhotoId"
+      responses:
+        "200":
+          description: Photo bytes
+          headers:
+            Cache-Control:
+              schema:
+                type: string
+            X-Content-Type-Options:
+              schema:
+                type: string
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
   /api/v1/inspection-drafts/{equipmentId}:
     put:
       tags: [Inspections]
@@ -1346,6 +1427,13 @@ components:
         type: string
         format: uuid
     ImportId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    PhotoId:
       name: id
       in: path
       required: true
@@ -2145,6 +2233,37 @@ components:
         signature:
           type: string
           nullable: true
+
+    PhotoView:
+      type: object
+      required: [id, mime, sizeBytes, sha256, siteId, targetType, targetId, kind, uploadedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        mime:
+          type: string
+          enum: [image/jpeg, image/png]
+        sizeBytes:
+          type: integer
+          maximum: 10485760
+        sha256:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+        siteId:
+          type: string
+          format: uuid
+        targetType:
+          type: string
+        targetId:
+          type: string
+          format: uuid
+        kind:
+          type: string
+          enum: [EVIDENCE, BEFORE, AFTER]
+        uploadedAt:
+          type: string
+          format: date-time
 
     InspectionSubmitRequest:
       type: object

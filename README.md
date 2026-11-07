@@ -4,7 +4,9 @@ Kotlin monolith for mining equipment maintenance workflows. The implementation f
 
 ## Current scope
 
-Sprint 0 foundation, Sprint 1 identity/security, Sprint 2 organization/equipment/import, Sprint 3 status/history and Sprint 4 inspection backend: Gradle multi-project, Ktor API, PostgreSQL/Flyway, hash-chained audit, login and session rotation, site-scoped roles, organization references, equipment directory and movements, configurable Excel imports, status event history and optimistic status updates, Active Problems, a site-scoped SSE event stream, daily inspection expectations, shift-aware deadlines, immutable inspection submissions, defects, corrections, checklist administration and automatic critical-safety status rules. The Sprint 4 acceptance tests cover validation, submission idempotency, late submissions, critical failures, engine-hour properties, expectation generation, missing marking, shift resolution, photo references and supervisor/manager overrides. Gradle build and database integration tests pass locally.
+Sprint 0 foundation, Sprint 1 identity/security, Sprint 2 organization/equipment/import, Sprint 3 status/history, Sprint 4 inspection backend and Sprint 5 offline Android client: Gradle multi-project, Ktor API, PostgreSQL/Flyway, hash-chained audit, login and session rotation, site-scoped roles, organization references, equipment directory and movements, configurable Excel imports, status event history and optimistic status updates, Active Problems, a site-scoped SSE event stream, daily inspection expectations, shift-aware deadlines, immutable inspection submissions, defects, corrections, checklist administration and automatic critical-safety status rules.
+
+The Android client is offline-first: encrypted tokens and database keys, SQLCipher persistence, a WorkManager outbox with idempotency keys and conflict recovery, cached equipment references and signed-in profile, status updates, a resumable inspection wizard, engine-hour readings, CameraX photo evidence with client compression, and sync-issue review. The test suites cover inspection validation, submission idempotency, late submissions, critical failures, engine-hour properties, expectation generation, missing marking, shift resolution, photo references, supervisor/manager overrides, offline status failures, stale-status conflicts, photo retry and inspection draft completion.
 
 ## Run locally
 
@@ -30,4 +32,14 @@ Status history is available at `/api/v1/equipment/{id}/status-events`; active `D
 
 Inspections are listed at `/api/v1/inspections/expected` and `/api/v1/inspections/control`, submitted through `POST /api/v1/inspections`, and loaded with frozen answers and defects at `/api/v1/inspections/{id}`. Drafts use `PUT /api/v1/inspection-drafts/{equipmentId}`. Checklist items, corrections and defects are exposed under `/api/v1/checklist-items`, `/api/v1/inspections/{id}/corrections`, `/api/v1/corrections/{id}/decision` and `/api/v1/defects`. Expectation generation and missing marking run on a persistent `db-scheduler` schedule and are idempotent at the database level. A critical safety failure triggers the administrable `AUTO_DOWN` status rule; reversing that projected `DOWN` requires `STATUS_OVERRIDE` and a stored override reason.
 
-The current HTTP contract is documented in [`docs/openapi.yaml`](docs/openapi.yaml). It covers authentication, users, organization, equipment, status, import, inspection and defect endpoints, including `If-Match`, `Idempotency-Key`, error responses and SSE resumption headers. CI validates the contract with Redocly and publishes the generated reference as a build artifact. CI also enforces `ktlint`, `detekt` with per-module baselines, Konsist architecture rules and at least 95% line coverage for the Sprint 3 status service and domain package.
+### Build the Android client
+
+Requirements: Android SDK platform 36 and JDK 21. The debug build uses the local SDK configured through `ANDROID_HOME` or `local.properties`.
+
+```sh
+gradle :androidApp:testDebugUnitTest :androidApp:assembleDebug
+```
+
+The debug APK is written to `androidApp/build/outputs/apk/debug/androidApp-debug.apk`. Physical-device and emulator acceptance still requires a connected Android target; no device is required for the JVM/Robolectric suite or the APK build.
+
+The current HTTP contract is documented in [`docs/openapi.yaml`](docs/openapi.yaml). It covers authentication, users, organization, equipment, status, import, inspection, defect and photo endpoints, including `If-Match`, `Idempotency-Key`, error responses and SSE resumption headers. CI runs the full Gradle build, validates the contract with Redocly and publishes the generated reference and debug APK as build artifacts. CI also enforces `ktlint`, `detekt` with per-module baselines, Konsist architecture rules and Kover coverage thresholds.

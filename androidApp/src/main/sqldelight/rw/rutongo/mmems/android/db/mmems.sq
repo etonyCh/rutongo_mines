@@ -1,0 +1,269 @@
+CREATE TABLE site (
+    id TEXT NOT NULL PRIMARY KEY,
+    code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    state TEXT NOT NULL,
+    timezone TEXT NOT NULL,
+    version INTEGER NOT NULL
+);
+
+CREATE TABLE equipment (
+    id TEXT NOT NULL PRIMARY KEY,
+    asset_id TEXT NOT NULL,
+    equipment_code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    type TEXT NOT NULL,
+    site_id TEXT NOT NULL,
+    site_name TEXT NOT NULL,
+    tunnel_id TEXT,
+    tunnel_name TEXT,
+    lifecycle_state TEXT NOT NULL,
+    operational_status TEXT NOT NULL,
+    engine_hours REAL,
+    version INTEGER NOT NULL,
+    inspection_required INTEGER NOT NULL DEFAULT 1,
+    cached_at TEXT NOT NULL
+);
+
+CREATE TABLE checklist_item (
+    id TEXT NOT NULL PRIMARY KEY,
+    category TEXT NOT NULL,
+    code TEXT NOT NULL,
+    label TEXT NOT NULL,
+    sort_order INTEGER NOT NULL,
+    mandatory INTEGER NOT NULL,
+    safety_critical INTEGER NOT NULL,
+    photo_required_on_fail INTEGER NOT NULL,
+    na_reason_required INTEGER NOT NULL,
+    active INTEGER NOT NULL
+);
+
+CREATE TABLE shift (
+    id TEXT NOT NULL PRIMARY KEY,
+    code TEXT NOT NULL,
+    name TEXT NOT NULL,
+    version INTEGER NOT NULL
+);
+
+CREATE TABLE expected_inspection (
+    id TEXT NOT NULL PRIMARY KEY,
+    equipment_id TEXT NOT NULL,
+    equipment_name TEXT NOT NULL,
+    equipment_code TEXT NOT NULL,
+    site_id TEXT NOT NULL,
+    site_name TEXT NOT NULL,
+    shift_id TEXT NOT NULL,
+    shift_code TEXT NOT NULL,
+    report_date TEXT NOT NULL,
+    window_start TEXT NOT NULL,
+    window_end TEXT NOT NULL,
+    state TEXT NOT NULL,
+    missing_marked_at TEXT
+);
+
+CREATE TABLE draft (
+    id TEXT NOT NULL PRIMARY KEY,
+    client_uuid TEXT NOT NULL UNIQUE,
+    equipment_id TEXT NOT NULL,
+    expectation_id TEXT,
+    shift_id TEXT NOT NULL,
+    report_date TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    step TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE outbox (
+    id TEXT NOT NULL PRIMARY KEY,
+    client_uuid TEXT NOT NULL UNIQUE,
+    kind TEXT NOT NULL,
+    equipment_id TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    if_match INTEGER,
+    state TEXT NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT,
+    conflict_state TEXT,
+    server_reference TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE pending_photo (
+    id TEXT NOT NULL PRIMARY KEY,
+    inspection_client_uuid TEXT NOT NULL,
+    answer_code TEXT,
+    site_id TEXT NOT NULL,
+    target_type TEXT NOT NULL,
+    target_id TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    mime TEXT NOT NULL,
+    size_bytes INTEGER NOT NULL,
+    state TEXT NOT NULL,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT,
+    remote_id TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE TABLE sync_state (
+    key TEXT NOT NULL PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE INDEX equipment_site ON equipment(site_id);
+CREATE INDEX expected_site ON expected_inspection(site_id);
+CREATE INDEX outbox_state ON outbox(state);
+CREATE INDEX pending_photo_state ON pending_photo(state);
+
+selectSites:
+SELECT * FROM site ORDER BY name;
+
+selectAllEquipment:
+SELECT * FROM equipment ORDER BY site_name, name;
+
+selectEquipmentById:
+SELECT * FROM equipment WHERE id = ?;
+
+selectChecklist:
+SELECT * FROM checklist_item WHERE active = 1 ORDER BY sort_order;
+
+selectShifts:
+SELECT * FROM shift ORDER BY code;
+
+selectExpected:
+SELECT * FROM expected_inspection ORDER BY window_end, equipment_name;
+
+selectExpectedById:
+SELECT * FROM expected_inspection WHERE id = ?;
+
+selectDraftByClientUuid:
+SELECT * FROM draft WHERE client_uuid = ?;
+
+selectOpenDrafts:
+SELECT * FROM draft ORDER BY updated_at DESC;
+
+selectPendingOutbox:
+SELECT * FROM outbox WHERE state IN ('PENDING', 'RETRY') ORDER BY created_at;
+
+selectOutbox:
+SELECT * FROM outbox ORDER BY created_at DESC;
+
+selectOutboxByClientUuid:
+SELECT * FROM outbox WHERE client_uuid = ?;
+
+selectPendingPhotos:
+SELECT * FROM pending_photo WHERE state IN ('PENDING', 'RETRY') ORDER BY created_at;
+
+selectPendingPhotosForInspection:
+SELECT * FROM pending_photo WHERE inspection_client_uuid = ? ORDER BY created_at;
+
+selectPendingPhotoById:
+SELECT * FROM pending_photo WHERE id = ?;
+
+selectSyncState:
+SELECT value FROM sync_state WHERE key = ?;
+
+upsertSyncState:
+INSERT OR REPLACE INTO sync_state(key, value, updated_at) VALUES (?, ?, ?);
+
+clearSites:
+DELETE FROM site;
+
+clearEquipment:
+DELETE FROM equipment;
+
+clearChecklist:
+DELETE FROM checklist_item;
+
+clearShifts:
+DELETE FROM shift;
+
+clearExpected:
+DELETE FROM expected_inspection;
+
+countOutbox:
+SELECT count(*) FROM outbox;
+
+countPendingPhotos:
+SELECT count(*) FROM pending_photo WHERE state IN ('PENDING', 'RETRY');
+
+insertOutbox:
+INSERT INTO outbox(id, client_uuid, kind, equipment_id, payload, if_match, state, attempts, last_error, conflict_state, server_reference, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+insertPendingPhoto:
+INSERT INTO pending_photo(id, inspection_client_uuid, answer_code, site_id, target_type, target_id, file_path, mime, size_bytes, state, attempts, last_error, remote_id, created_at, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+upsertDraft:
+INSERT OR REPLACE INTO draft(id, client_uuid, equipment_id, expectation_id, shift_id, report_date, payload, step, updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+insertSite:
+INSERT INTO site(id, code, name, state, timezone, version) VALUES (?, ?, ?, ?, ?, ?);
+
+insertEquipment:
+INSERT INTO equipment(id, asset_id, equipment_code, name, type, site_id, site_name, tunnel_id, tunnel_name, lifecycle_state, operational_status, engine_hours, version, inspection_required, cached_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+insertChecklistItem:
+INSERT INTO checklist_item(id, category, code, label, sort_order, mandatory, safety_critical, photo_required_on_fail, na_reason_required, active)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+insertShift:
+INSERT INTO shift(id, code, name, version) VALUES (?, ?, ?, ?);
+
+insertExpectedInspection:
+INSERT INTO expected_inspection(id, equipment_id, equipment_name, equipment_code, site_id, site_name, shift_id, shift_code, report_date, window_start, window_end, state, missing_marked_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteDraftByClientUuid:
+DELETE FROM draft WHERE client_uuid = ?;
+
+updateOutboxState:
+UPDATE outbox SET state = ?, attempts = ?, last_error = ?, updated_at = ? WHERE client_uuid = ?;
+
+updateOutboxDone:
+UPDATE outbox SET state = ?, server_reference = ?, updated_at = ? WHERE client_uuid = ?;
+
+updateOutboxTerminal:
+UPDATE outbox SET state = ?, last_error = ?, updated_at = ? WHERE client_uuid = ?;
+
+updateOutboxConflict:
+UPDATE outbox SET state = ?, conflict_state = ?, updated_at = ? WHERE client_uuid = ?;
+
+updateOutboxPending:
+UPDATE outbox SET state = ?, updated_at = ? WHERE client_uuid = ?;
+
+updatePendingPhotoState:
+UPDATE pending_photo SET state = ?, attempts = ?, last_error = ?, remote_id = ?, updated_at = ? WHERE id = ?;
+
+updateEquipmentStatus:
+UPDATE equipment SET operational_status = ?, version = ?, cached_at = ? WHERE id = ?;
+
+selectEquipmentBySite:
+SELECT * FROM equipment WHERE site_id = ? ORDER BY name;
+
+selectOpenDraftsFlow:
+SELECT * FROM draft ORDER BY updated_at DESC;
+
+selectOutboxForKind:
+SELECT * FROM outbox WHERE kind = ? ORDER BY created_at DESC;
+
+deleteOutboxByClientUuid:
+DELETE FROM outbox WHERE client_uuid = ?;
+
+clearOutbox:
+DELETE FROM outbox;
+
+clearDrafts:
+DELETE FROM draft;
+
+clearPendingPhotos:
+DELETE FROM pending_photo;
+
+clearSyncState:
+DELETE FROM sync_state;

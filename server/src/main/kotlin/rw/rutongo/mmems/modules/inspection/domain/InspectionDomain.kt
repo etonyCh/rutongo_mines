@@ -5,9 +5,13 @@ package rw.rutongo.mmems.modules.inspection.domain
 import rw.rutongo.mmems.shared.enums.Answer
 import rw.rutongo.mmems.shared.enums.InspectionResult
 import rw.rutongo.mmems.shared.enums.Severity
+import rw.rutongo.mmems.shared.inspection.InspectionAnswerRule
+import rw.rutongo.mmems.shared.inspection.InspectionChecklistRule
+import rw.rutongo.mmems.shared.inspection.InspectionValidationInput
 import java.time.Instant
 import java.time.LocalDate
-import java.util.UUID
+import rw.rutongo.mmems.shared.inspection.EngineHours as SharedEngineHours
+import rw.rutongo.mmems.shared.inspection.InspectionValidator as SharedInspectionValidator
 
 enum class ChecklistCategory { SAFETY, MECHANICAL }
 
@@ -96,23 +100,13 @@ object EngineHours {
         end: Double?,
         lastReading: Double?,
     ): EngineHoursEvaluation {
-        val errors = mutableListOf<InspectionFieldError>()
-        val warnings = mutableListOf<String>()
-        if (start == null) errors += InspectionFieldError("engineHoursStart", "Starting engine hours are required.")
-        if (start != null && start < 0.0) errors += InspectionFieldError("engineHoursStart", "Starting engine hours cannot be negative.")
-        if (end != null && end < 0.0) errors += InspectionFieldError("engineHoursEnd", "Ending engine hours cannot be negative.")
-        if (start != null && end != null && end < start) errors += InspectionFieldError("engineHoursEnd", "Ending hours cannot be lower than starting hours.")
-        if (start != null && lastReading != null && start < lastReading) warnings += "START_BELOW_LAST_READING"
-        if (start != null && end != null && end - start > 24.0) warnings += "WORKING_HOURS_ABOVE_24"
-        val recorded = if (start != null && end != null && end >= start) end - start else null
-        val status =
-            when {
-                start == null || end == null -> WorkingHoursStatus.MISSING_READING
-                errors.isNotEmpty() -> WorkingHoursStatus.SUSPICIOUS
-                "WORKING_HOURS_ABOVE_24" in warnings -> WorkingHoursStatus.SUSPICIOUS
-                else -> WorkingHoursStatus.VALID
-            }
-        return EngineHoursEvaluation(recorded, status, errors, warnings)
+        val evaluation = SharedEngineHours.evaluate(start, end, lastReading)
+        return EngineHoursEvaluation(
+            evaluation.recordedHours,
+            WorkingHoursStatus.valueOf(evaluation.status.name),
+            evaluation.errors.map { InspectionFieldError(it.field, it.message) },
+            evaluation.warnings,
+        )
     }
 }
 
@@ -122,37 +116,42 @@ object InspectionValidator {
         items: List<ChecklistItem>,
         lastReading: Double?,
     ): ValidationOutcome {
-        val errors = mutableListOf<InspectionFieldError>()
-        val warnings = mutableListOf<String>()
-        val answers = submission.answers.associateBy { it.itemId }
-        for (item in items.filter { it.mandatory && it.active }) {
-            val answer = answers[item.id]
-            if (answer == null) {
-                errors += InspectionFieldError("answers.${item.code}", "${item.label} must be answered.")
-                continue
-            }
-            when (answer.answer) {
-                Answer.FAIL -> {
-                    if (answer.defect?.description.isNullOrBlank()) errors += InspectionFieldError("answers.${item.code}.defect", "Describe the defect.")
-                    if ((item.safetyCritical || item.photoRequiredOnFail) && answer.photoIds.isEmpty()) {
-                        errors += InspectionFieldError("answers.${item.code}.photo", "A photo is required for this failure.")
-                    }
-                    if (answer.photoIds.any { runCatching { UUID.fromString(it) }.isFailure }) {
-                        errors += InspectionFieldError("answers.${item.code}.photo", "Photo references must be valid identifiers.")
-                    }
-                }
-                Answer.NA ->
-                    if (item.naReasonRequired && answer.naReason.isNullOrBlank()) {
-                        errors += InspectionFieldError("answers.${item.code}.naReason", "Give a reason for N/A.")
-                    }
-                Answer.PASS -> Unit
-            }
-        }
-        val engineHours = EngineHours.evaluate(submission.engineHoursStart, submission.engineHoursEnd, lastReading)
-        errors += engineHours.errors
-        warnings += engineHours.warnings
-        if (submission.attestation == null) errors += InspectionFieldError("attestation", "Signature is required before submission.")
-        return ValidationOutcome(errors, warnings)
+        val outcome =
+            SharedInspectionValidator.validate(
+                InspectionValidationInput(
+                    answers =
+                        submission.answers.map {
+                            InspectionAnswerRule(
+                                itemId = it.itemId,
+                                answer = it.answer,
+                                naReason = it.naReason,
+                                defectDescription = it.defect?.description,
+                                photoIds = it.photoIds,
+                            )
+                        },
+                    checklist =
+                        items.map {
+                            InspectionChecklistRule(
+                                itemId = it.id,
+                                code = it.code,
+                                label = it.label,
+                                mandatory = it.mandatory,
+                                safetyCritical = it.safetyCritical,
+                                photoRequiredOnFail = it.photoRequiredOnFail,
+                                naReasonRequired = it.naReasonRequired,
+                                active = it.active,
+                            )
+                        },
+                    engineHoursStart = submission.engineHoursStart,
+                    engineHoursEnd = submission.engineHoursEnd,
+                    lastReading = lastReading,
+                    attestationPresent = submission.attestation != null,
+                ),
+            )
+        return ValidationOutcome(
+            outcome.errors.map { InspectionFieldError(it.field, it.message) },
+            outcome.warnings,
+        )
     }
 
     fun result(answers: List<AnswerWithSeverity>): InspectionResult =

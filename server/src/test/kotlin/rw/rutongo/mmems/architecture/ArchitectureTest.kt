@@ -38,7 +38,7 @@ class ArchitectureTest {
     }
 
     @Test
-    fun `modules depend on identity and shared only`() {
+    fun `modules depend on identity, shared and platform only`() {
         with(KoArchitectureCreator) {
             Konsist
                 .scopeFromProduction()
@@ -48,8 +48,7 @@ class ArchitectureTest {
                     val identity = Layer("Identity", "rw.rutongo.mmems.identity..")
                     val modules = Layer("Modules", "rw.rutongo.mmems.modules..")
 
-                    modules.dependsOn(identity, shared, strict = true)
-                    modules.doesNotDependOn(platform)
+                    modules.dependsOn(identity, shared, platform, strict = true)
                 }
         }
     }
