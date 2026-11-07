@@ -85,8 +85,18 @@ fun Route.photoRoutes(
             try {
                 call.respond(HttpStatusCode.Created, service.upload(actor, uploadSiteId!!, uploadTargetType!!, uploadTargetId!!, kind, contentType, fileBytes!!, photoId))
             } catch (e: IllegalArgumentException) {
-                val code = if (e.message == "SITE_NOT_AUTHORIZED") "SITE_NOT_AUTHORIZED" else "INVALID_PHOTO"
-                val status = if (code == "SITE_NOT_AUTHORIZED") HttpStatusCode.Forbidden else HttpStatusCode.BadRequest
+                val code =
+                    when (e.message) {
+                        "SITE_NOT_AUTHORIZED", "FORBIDDEN" -> e.message!!
+                        "BREAKDOWN_NOT_FOUND" -> "BREAKDOWN_NOT_FOUND"
+                        else -> "INVALID_PHOTO"
+                    }
+                val status =
+                    when (code) {
+                        "SITE_NOT_AUTHORIZED", "FORBIDDEN" -> HttpStatusCode.Forbidden
+                        "BREAKDOWN_NOT_FOUND" -> HttpStatusCode.NotFound
+                        else -> HttpStatusCode.BadRequest
+                    }
                 call.respond(status, ApiError(code, e.message ?: "The photo could not be uploaded."))
             }
         }

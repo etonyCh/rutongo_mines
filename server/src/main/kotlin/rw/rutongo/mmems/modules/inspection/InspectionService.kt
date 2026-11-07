@@ -93,6 +93,7 @@ import javax.sql.DataSource
     val severity: String,
     val immediateAction: String?,
     val state: String,
+    val breakdownId: String?,
     val reportedBy: String,
     val reportedAt: String,
     val resolvedAt: String?,
@@ -518,6 +519,7 @@ class InspectionService(
         state: String?,
         severity: String?,
         immediateAction: String?,
+        breakdownId: UUID?,
         expectedVersion: Long,
     ): DefectView =
         dataSource.connection.use { c ->
@@ -528,11 +530,13 @@ class InspectionService(
                     ps.executeQuery().use { if (it.next()) it.getObject(1, UUID::class.java) else throw AuthFailure("DEFECT_NOT_FOUND") }
                 }
             if (!hasSiteAccess(c, actor, siteId)) throw AuthFailure("SITE_NOT_AUTHORIZED")
+            if (breakdownId != null) validateDefectBreakdown(c, defectId, breakdownId)
             c
                 .prepareStatement(
                     """
                     update defect set state=coalesce(?,state),severity=coalesce(?,severity),
-                      immediate_action=coalesce(?,immediate_action),resolved_at=case when ? in ('RESOLVED','CLOSED') then now() else resolved_at end,
+                      immediate_action=coalesce(?,immediate_action),breakdown_id=coalesce(?,breakdown_id),
+                      resolved_at=case when ? in ('RESOLVED','CLOSED') then now() else resolved_at end,
                       resolved_by=case when ? in ('RESOLVED','CLOSED') then ? else resolved_by end,version=version+1
                     where id=? and version=? returning *
                     """.trimIndent(),
@@ -540,11 +544,12 @@ class InspectionService(
                     ps.setString(1, state)
                     ps.setString(2, severity)
                     ps.setString(3, immediateAction)
-                    ps.setString(4, state)
+                    ps.setObject(4, breakdownId)
                     ps.setString(5, state)
-                    ps.setObject(6, actor.id)
-                    ps.setObject(7, defectId)
-                    ps.setLong(8, expectedVersion)
+                    ps.setString(6, state)
+                    ps.setObject(7, actor.id)
+                    ps.setObject(8, defectId)
+                    ps.setLong(9, expectedVersion)
                     ps.executeQuery().use {
                         if (!it.next()) throw AuthFailure("DEFECT_VERSION_CONFLICT")
                         it.toDefectView()
@@ -1099,6 +1104,28 @@ class InspectionService(
             ps.executeQuery().use { if (it.next()) it.getObject(1, UUID::class.java) else throw AuthFailure("EQUIPMENT_NOT_FOUND") }
         }
 
+    private fun validateDefectBreakdown(
+        c: Connection,
+        defectId: UUID,
+        breakdownId: UUID,
+    ) {
+        val equipmentId =
+            c.prepareStatement("select equipment_id from defect where id=?").use { ps ->
+                ps.setObject(1, defectId)
+                ps.executeQuery().use { if (it.next()) it.getObject(1, UUID::class.java) else throw AuthFailure("DEFECT_NOT_FOUND") }
+            }
+        val breakdown =
+            c.prepareStatement("select equipment_id,state from breakdown where id=?").use { ps ->
+                ps.setObject(1, breakdownId)
+                ps.executeQuery().use {
+                    if (!it.next()) throw AuthFailure("BREAKDOWN_NOT_FOUND")
+                    it.getObject(1, UUID::class.java) to it.getString(2)
+                }
+            }
+        if (breakdown.first != equipmentId) throw AuthFailure("BREAKDOWN_EQUIPMENT_MISMATCH")
+        if (breakdown.second == "CLOSED") throw AuthFailure("BREAKDOWN_CLOSED")
+    }
+
     private fun hasSiteAccess(
         c: Connection,
         actor: Principal,
@@ -1197,6 +1224,7 @@ class InspectionService(
             getString("severity"),
             getString("immediate_action"),
             getString("state"),
+            getObject("breakdown_id", UUID::class.java)?.toString(),
             getObject("reported_by", UUID::class.java).toString(),
             getTimestamp("reported_at").toInstant().toString(),
             getTimestamp("resolved_at")?.toInstant()?.toString(),

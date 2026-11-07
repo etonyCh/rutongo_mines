@@ -5,6 +5,7 @@ package rw.rutongo.mmems.modules.photo
 import kotlinx.serialization.Serializable
 import rw.rutongo.mmems.identity.AuthFailure
 import rw.rutongo.mmems.identity.Principal
+import rw.rutongo.mmems.identity.RolePermissions
 import rw.rutongo.mmems.platform.BlobStore
 import rw.rutongo.mmems.shared.enums.Role
 import java.io.ByteArrayInputStream
@@ -47,6 +48,7 @@ class PhotoService(
     ): PhotoView {
         require(targetType in TARGET_TYPES) { "The photo target type is invalid." }
         require(kind in KINDS) { "The photo kind is invalid." }
+        require(targetType != "BREAKDOWN" || RolePermissions.allows(actor.role, "BREAKDOWN_MANAGE")) { "FORBIDDEN" }
         require(bytes.isNotEmpty()) { "The photo is empty." }
         require(bytes.size <= MAX_BYTES) { "The photo exceeds 10 MiB." }
         val image = ImageType.detect(bytes) ?: throw IllegalArgumentException("Only JPEG and PNG images are accepted.")
@@ -59,6 +61,7 @@ class PhotoService(
         try {
             val uploadedAt =
                 dataSource.connection.use { c ->
+                    validateTarget(c, siteId, targetType, targetId)
                     c
                         .prepareStatement(
                             "insert into photo(id,storage_key,sha256,mime,size_bytes,uploader_id,site_id,target_type,target_id,kind) values (?,?,?,?,?,?,?,?,?,?) returning uploaded_at",
@@ -123,6 +126,22 @@ class PhotoService(
         it.setBoolean(4, actor.role in broadRoles)
         it.setObject(5, actor.id)
         it.executeQuery().use { rs -> rs.next() && rs.getBoolean(1) }
+    }
+
+    private fun validateTarget(
+        c: Connection,
+        siteId: UUID,
+        targetType: String,
+        targetId: UUID,
+    ) {
+        if (targetType != "BREAKDOWN") return
+        val targetSite =
+            c.prepareStatement("select site_id from breakdown where id=?").use { ps ->
+                ps.setObject(1, targetId)
+                ps.executeQuery().use { if (it.next()) it.getObject(1, UUID::class.java) else null }
+            }
+        requireNotNull(targetSite) { "BREAKDOWN_NOT_FOUND" }
+        require(targetSite == siteId) { "SITE_NOT_AUTHORIZED" }
     }
 
     private fun sha256(bytes: ByteArray): String =

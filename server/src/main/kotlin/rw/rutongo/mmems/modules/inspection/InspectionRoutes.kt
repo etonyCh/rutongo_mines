@@ -102,6 +102,7 @@ import java.util.UUID
     val state: String? = null,
     val severity: String? = null,
     val immediateAction: String? = null,
+    val breakdownId: String? = null,
     val version: Long,
 )
 
@@ -267,7 +268,12 @@ fun Route.inspectionRoutes(
                     call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_DEFECT", "The defect patch is invalid."))
                     return@patch
                 }
-            respondFailure(call) { call.respond(service.updateDefect(actor, id, request.state, request.severity, request.immediateAction, request.version)) }
+            val breakdownId = request.breakdownId?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+            if (request.breakdownId != null && breakdownId == null) {
+                call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_BREAKDOWN_ID", "The breakdown ID is invalid."))
+                return@patch
+            }
+            respondFailure(call) { call.respond(service.updateDefect(actor, id, request.state, request.severity, request.immediateAction, breakdownId, request.version)) }
         }
     }
 }
@@ -288,8 +294,8 @@ private suspend fun respondFailure(
 private fun statusFor(code: String): HttpStatusCode =
     when (code) {
         "FORBIDDEN", "SITE_NOT_AUTHORIZED" -> HttpStatusCode.Forbidden
-        "EQUIPMENT_NOT_FOUND", "EXPECTATION_NOT_FOUND", "INSPECTION_NOT_FOUND", "CHECKLIST_ITEM_NOT_FOUND", "CORRECTION_NOT_FOUND", "DEFECT_NOT_FOUND", "SHIFT_NOT_FOUND" -> HttpStatusCode.NotFound
-        "INSPECTION_EXPECTATION_MISMATCH", "INSPECTION_EXPECTATION_ALREADY_COMPLETED", "DEFECT_VERSION_CONFLICT", "CORRECTION_ALREADY_DECIDED" -> HttpStatusCode.Conflict
+        "EQUIPMENT_NOT_FOUND", "EXPECTATION_NOT_FOUND", "INSPECTION_NOT_FOUND", "CHECKLIST_ITEM_NOT_FOUND", "CORRECTION_NOT_FOUND", "DEFECT_NOT_FOUND", "BREAKDOWN_NOT_FOUND", "SHIFT_NOT_FOUND" -> HttpStatusCode.NotFound
+        "INSPECTION_EXPECTATION_MISMATCH", "INSPECTION_EXPECTATION_ALREADY_COMPLETED", "DEFECT_VERSION_CONFLICT", "CORRECTION_ALREADY_DECIDED", "BREAKDOWN_EQUIPMENT_MISMATCH", "BREAKDOWN_CLOSED" -> HttpStatusCode.Conflict
         else -> HttpStatusCode.BadRequest
     }
 

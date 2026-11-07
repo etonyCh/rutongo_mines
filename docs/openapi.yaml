@@ -21,6 +21,8 @@ tags:
   - name: Imports
   - name: Inspections
   - name: Defects
+  - name: Breakdowns
+  - name: Photos
 
 paths:
   /health:
@@ -1333,7 +1335,7 @@ paths:
   /api/v1/defects/{id}:
     patch:
       tags: [Defects]
-      summary: Update a defect state or severity
+      summary: Update a defect state, severity, action, or breakdown link
       parameters:
         - name: id
           in: path
@@ -1361,7 +1363,110 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
-          description: Version conflict
+          description: Version conflict or invalid breakdown link
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/breakdowns:
+    get:
+      tags: [Breakdowns]
+      summary: List breakdowns visible to the caller
+      parameters:
+        - $ref: "#/components/parameters/SiteIdQuery"
+        - name: equipmentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: state
+          in: query
+          schema:
+            $ref: "#/components/schemas/BreakdownState"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Breakdowns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BreakdownView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Breakdowns]
+      summary: Report a breakdown
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BreakdownCreateRequest"
+      responses:
+        "201":
+          description: Breakdown reported
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BreakdownView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: An active breakdown already exists for the equipment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/breakdowns/{id}/transition:
+    post:
+      tags: [Breakdowns]
+      summary: Move a breakdown through its repair lifecycle
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BreakdownTransitionRequest"
+      responses:
+        "200":
+          description: Breakdown updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BreakdownView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict or invalid lifecycle transition
           content:
             application/json:
               schema:
@@ -2461,6 +2566,10 @@ components:
         state:
           type: string
           enum: [OPEN, IN_REPAIR, RESOLVED, CLOSED]
+        breakdownId:
+          type: string
+          format: uuid
+          nullable: true
         reportedBy:
           type: string
           format: uuid
@@ -2683,6 +2792,163 @@ components:
         immediateAction:
           type: string
           nullable: true
+        breakdownId:
+          type: string
+          format: uuid
+          nullable: true
+        version:
+          type: integer
+          format: int64
+
+    BreakdownState:
+      type: string
+      enum: [REPORTED, DIAGNOSING, AWAITING_PARTS, UNDER_REPAIR, RESOLVED, CLOSED]
+
+    BreakdownCreateRequest:
+      type: object
+      required: [equipmentId, category, problem]
+      properties:
+        equipmentId:
+          type: string
+          format: uuid
+        category:
+          type: string
+        problem:
+          type: string
+        tunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        shiftId:
+          type: string
+          format: uuid
+          nullable: true
+        reportedAt:
+          type: string
+          format: date-time
+          nullable: true
+        breakdownStart:
+          type: string
+          format: date-time
+          nullable: true
+        assignedTechnicianId:
+          type: string
+          format: uuid
+          nullable: true
+        actionTaken:
+          type: string
+          nullable: true
+        partsRequired:
+          type: string
+          nullable: true
+        remarks:
+          type: string
+          nullable: true
+        defectIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    BreakdownTransitionRequest:
+      type: object
+      required: [state]
+      properties:
+        state:
+          $ref: "#/components/schemas/BreakdownState"
+        repairStart:
+          type: string
+          format: date-time
+          nullable: true
+        repairEnd:
+          type: string
+          format: date-time
+          nullable: true
+        actionTaken:
+          type: string
+          nullable: true
+        partsRequired:
+          type: string
+          nullable: true
+        assignedTechnicianId:
+          type: string
+          format: uuid
+          nullable: true
+        remarks:
+          type: string
+          nullable: true
+
+    BreakdownView:
+      type: object
+      required:
+        [id, equipmentId, category, problem, siteId, reportedBy, reportedAt, breakdownStart, state, defectIds, photoIds, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        equipmentId:
+          type: string
+          format: uuid
+        equipmentCode:
+          type: string
+          nullable: true
+        category:
+          type: string
+        problem:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+        tunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        shiftId:
+          type: string
+          format: uuid
+          nullable: true
+        reportedBy:
+          type: string
+          format: uuid
+        reportedAt:
+          type: string
+          format: date-time
+        breakdownStart:
+          type: string
+          format: date-time
+        repairStart:
+          type: string
+          format: date-time
+          nullable: true
+        repairEnd:
+          type: string
+          format: date-time
+          nullable: true
+        state:
+          $ref: "#/components/schemas/BreakdownState"
+        actionTaken:
+          type: string
+          nullable: true
+        partsRequired:
+          type: string
+          nullable: true
+        assignedTechnicianId:
+          type: string
+          format: uuid
+          nullable: true
+        remarks:
+          type: string
+          nullable: true
+        defectIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        photoIds:
+          type: array
+          items:
+            type: string
+            format: uuid
         version:
           type: integer
           format: int64

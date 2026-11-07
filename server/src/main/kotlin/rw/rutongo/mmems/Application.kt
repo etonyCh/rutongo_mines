@@ -16,6 +16,8 @@ import org.koin.ktor.plugin.Koin
 import rw.rutongo.mmems.identity.IdentityService
 import rw.rutongo.mmems.identity.TokenSigner
 import rw.rutongo.mmems.identity.identityRoutes
+import rw.rutongo.mmems.modules.breakdown.BreakdownService
+import rw.rutongo.mmems.modules.breakdown.breakdownRoutes
 import rw.rutongo.mmems.modules.equipment.EquipmentService
 import rw.rutongo.mmems.modules.equipment.equipmentRoutes
 import rw.rutongo.mmems.modules.importer.ImportService
@@ -66,6 +68,7 @@ fun Application.module() {
     val importer = ImportService(dataSource)
     val statuses = StatusService(dataSource)
     val inspections = InspectionService(dataSource)
+    val breakdowns = BreakdownService(dataSource)
     val blobStore = PrivateFileBlobStore(Path.of(System.getenv("BLOB_STORAGE_DIR") ?: "data/blobs"))
     val photos = PhotoService(dataSource, blobStore)
     val inspectionScheduler = InspectionScheduler(dataSource, GenerateExpectationsJob(dataSource), MarkMissingJob(dataSource))
@@ -108,6 +111,7 @@ fun Application.module() {
         importRoutes(importer, identity, signer)
         statusRoutes(statuses, identity, signer)
         inspectionRoutes(inspections, identity, signer)
+        breakdownRoutes(breakdowns, identity, signer)
         photoRoutes(photos, identity, signer)
     }
 }

@@ -14,6 +14,8 @@ enum class Answer { PASS, FAIL, NA }
 
 enum class Severity { MINOR, MAJOR, CRITICAL }
 
+enum class BreakdownState { REPORTED, DIAGNOSING, AWAITING_PARTS, UNDER_REPAIR, RESOLVED, CLOSED }
+
 enum class ReportPeriod { DAY, RED, NIGHT, FULL_DAY }
 
 enum class ReportState { DRAFT, SUBMITTED, RETURNED_FOR_CORRECTION, RESUBMITTED, APPROVED, SUPERSEDED }

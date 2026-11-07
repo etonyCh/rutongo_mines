@@ -69,4 +69,21 @@ class ArchitectureTest {
                 }
         }
     }
+
+    @Test
+    fun `breakdown domain depends only on shared`() {
+        with(KoArchitectureCreator) {
+            Konsist
+                .scopeFromProduction()
+                .assertArchitecture {
+                    val shared = Layer("Shared", "rw.rutongo.mmems.shared..")
+                    val platform = Layer("Platform", "rw.rutongo.mmems.platform..")
+                    val identity = Layer("Identity", "rw.rutongo.mmems.identity..")
+                    val breakdownDomain = Layer("Breakdown domain", "rw.rutongo.mmems.modules.breakdown.domain..")
+
+                    breakdownDomain.dependsOn(shared, strict = true)
+                    breakdownDomain.doesNotDependOn(identity, platform)
+                }
+        }
+    }
 }
