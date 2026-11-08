@@ -18,8 +18,12 @@ import rw.rutongo.mmems.identity.TokenSigner
 import rw.rutongo.mmems.identity.identityRoutes
 import rw.rutongo.mmems.modules.breakdown.BreakdownService
 import rw.rutongo.mmems.modules.breakdown.breakdownRoutes
+import rw.rutongo.mmems.modules.dashboard.DashboardService
+import rw.rutongo.mmems.modules.dashboard.dashboardRoutes
 import rw.rutongo.mmems.modules.equipment.EquipmentService
 import rw.rutongo.mmems.modules.equipment.equipmentRoutes
+import rw.rutongo.mmems.modules.exporter.ExportService
+import rw.rutongo.mmems.modules.exporter.exportRoutes
 import rw.rutongo.mmems.modules.importer.ImportService
 import rw.rutongo.mmems.modules.importer.importRoutes
 import rw.rutongo.mmems.modules.inspection.GenerateExpectationsJob
@@ -29,6 +33,11 @@ import rw.rutongo.mmems.modules.inspection.MarkMissingJob
 import rw.rutongo.mmems.modules.inspection.inspectionRoutes
 import rw.rutongo.mmems.modules.maintenance.MaintenanceService
 import rw.rutongo.mmems.modules.maintenance.maintenanceRoutes
+import rw.rutongo.mmems.modules.notification.FcmPushNotifier
+import rw.rutongo.mmems.modules.notification.NotificationDispatcher
+import rw.rutongo.mmems.modules.notification.NotificationScheduler
+import rw.rutongo.mmems.modules.notification.NotificationService
+import rw.rutongo.mmems.modules.notification.notificationRoutes
 import rw.rutongo.mmems.modules.parts.PartsService
 import rw.rutongo.mmems.modules.parts.partsRoutes
 import rw.rutongo.mmems.modules.personnel.PersonnelService
@@ -88,10 +97,19 @@ fun Application.module() {
     val blobStore = PrivateFileBlobStore(Path.of(System.getenv("BLOB_STORAGE_DIR") ?: "data/blobs"))
     val photos = PhotoService(dataSource, blobStore)
     val reports = ReportService(dataSource, blobStore, ReportSnapshotBuilder(dataSource), DailyReportPdfRenderer())
+    val dashboards = DashboardService(dataSource)
+    val exports = ExportService(dataSource)
+    val notifications = NotificationService(dataSource)
+    val notificationDispatcher = NotificationDispatcher(dataSource, FcmPushNotifier())
+    val notificationScheduler = NotificationScheduler(dataSource, notificationDispatcher)
     val inspectionScheduler = InspectionScheduler(dataSource, GenerateExpectationsJob(dataSource), MarkMissingJob(dataSource))
-    environment.monitor.subscribe(ApplicationStarted) { inspectionScheduler.start() }
+    environment.monitor.subscribe(ApplicationStarted) {
+        inspectionScheduler.start()
+        notificationScheduler.start()
+    }
     environment.monitor.subscribe(ApplicationStopped) {
         inspectionScheduler.stop()
+        notificationScheduler.stop()
         dataSource.close()
     }
     install(Koin) {
@@ -106,6 +124,9 @@ fun Application.module() {
                 single { statuses }
                 single { inspections }
                 single { photos }
+                single { dashboards }
+                single { exports }
+                single { notifications }
             },
         )
     }
@@ -135,6 +156,10 @@ fun Application.module() {
         personnelRoutes(personnel, identity, signer)
         photoRoutes(photos, identity, signer)
         reportRoutes(reports, identity, signer)
+        dashboardRoutes(dashboards, identity, signer)
+        notificationRoutes(notifications, identity, signer)
+        exportRoutes(exports, identity, signer)
+        eventRoutes(statuses, notifications, identity, signer)
     }
 }
 

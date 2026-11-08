@@ -28,6 +28,9 @@ tags:
   - name: Parts
   - name: Personnel
   - name: Reports
+  - name: Dashboard
+  - name: Notifications
+  - name: Exports
 
 paths:
   /health:
@@ -1066,11 +1069,13 @@ paths:
 
   /api/v1/events:
     get:
-      tags: [Status]
-      summary: Stream equipment status events
+      tags: [Status, Notifications]
+      summary: Stream equipment status and notification events
       description: |
-        Server-sent events endpoint. Send Last-Event-ID as
-        "<recordedAt>|<eventId>" to resume after a known event.
+        Server-sent events endpoint. The server emits equipment-status and
+        notification events. Send the Last-Event-ID value returned by the
+        stream to resume. Legacy "<recordedAt>|<eventId>" status cursors are
+        also accepted.
       parameters:
         - name: Last-Event-ID
           in: header
@@ -2953,6 +2958,255 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           description: Version conflict or invalid report state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/dashboard/{kind}:
+    get:
+      tags: [Dashboard]
+      summary: Read a role-based operational dashboard
+      description: Requires a role allowed to view the requested dashboard. Managers, general managers and administrators see all sites unless site access is assigned.
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [mechanic, supervisor, manager, executive]
+        - name: site
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Dashboard metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardDto"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v1/notifications:
+    get:
+      tags: [Notifications]
+      summary: List the caller's notifications
+      parameters:
+        - name: since
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: unreadOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+      responses:
+        "200":
+          description: Notifications and unread count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationListDto"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/notifications/read-all:
+    post:
+      tags: [Notifications]
+      summary: Mark all of the caller's notifications as read
+      responses:
+        "200":
+          description: Number of notifications updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated:
+                    type: integer
+
+  /api/v1/notifications/devices:
+    post:
+      tags: [Notifications]
+      summary: Register or refresh a push device token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PushDeviceRegistrationDto"
+      responses:
+        "201":
+          description: Registered push device
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PushDeviceDto"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  /api/v1/notifications/{id}/read:
+    post:
+      tags: [Notifications]
+      summary: Mark one notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Updated notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationDto"
+        "404":
+          description: Notification not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/notification-rules:
+    get:
+      tags: [Notifications]
+      summary: List notification routing rules
+      description: Requires CONFIG_MANAGE.
+      responses:
+        "200":
+          description: Notification rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/NotificationRuleDto"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v1/notification-rules/{type}:
+    put:
+      tags: [Notifications]
+      summary: Update a notification routing rule
+      description: Requires CONFIG_MANAGE.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/NotificationType"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/NotificationRuleUpdateDto"
+      responses:
+        "200":
+          description: Updated notification rule
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationRuleDto"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v1/exports:
+    get:
+      tags: [Exports]
+      summary: List export datasets available to the caller
+      description: Requires EXPORT_DATA.
+      responses:
+        "200":
+          description: Export datasets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ExportDatasetDto"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v1/exports/{file}:
+    get:
+      tags: [Exports]
+      summary: Download a dataset as XLSX or CSV
+      description: |
+        Requires EXPORT_DATA. The file name is "<dataset>.xlsx" or
+        "<dataset>.csv". Available datasets are equipment, inspections,
+        defects, breakdowns, maintenance, part-requests, working-hours,
+        reports, parts and stock-movements. Exports honour site access and
+        cost visibility, and create a DATA_EXPORTED audit event.
+      parameters:
+        - name: file
+          in: path
+          required: true
+          schema:
+            type: string
+            example: equipment.xlsx
+        - name: site
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Generated export file
+          content:
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            text/csv:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          description: Export dataset not found
           content:
             application/json:
               schema:
@@ -6009,3 +6263,205 @@ components:
           $ref: "#/components/schemas/ReportNarrative"
         snapshot:
           $ref: "#/components/schemas/DailyReportSnapshot"
+    NotificationType:
+      type: string
+      enum: [INSPECTION_MISSING, CRITICAL_DEFECT, EQUIPMENT_DOWN, REPAIR_ATTENTION, PART_REQUEST, LOW_STOCK, SERVICE_DUE, MAINTENANCE_VERIFY, REPORT_APPROVAL]
+    NotificationChannel:
+      type: string
+      enum: [IN_APP, PUSH, BOTH]
+    PushPlatform:
+      type: string
+      enum: [ANDROID, WEB]
+    NotificationDto:
+      type: object
+      required: [id, type, dedupeKey, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          $ref: "#/components/schemas/NotificationType"
+        dedupeKey:
+          type: string
+        payload:
+          type: object
+          additionalProperties:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+    NotificationListDto:
+      type: object
+      required: [items, unreadCount, serverTime]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/NotificationDto"
+        unreadCount:
+          type: integer
+        serverTime:
+          type: string
+          format: date-time
+    PushDeviceRegistrationDto:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          minLength: 8
+          maxLength: 4096
+        platform:
+          $ref: "#/components/schemas/PushPlatform"
+    PushDeviceDto:
+      type: object
+      required: [id, platform, createdAt, lastSeenAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        platform:
+          $ref: "#/components/schemas/PushPlatform"
+        createdAt:
+          type: string
+          format: date-time
+        lastSeenAt:
+          type: string
+          format: date-time
+    NotificationRuleDto:
+      type: object
+      required: [type, roles, siteScoped, channel, enabled]
+      properties:
+        type:
+          $ref: "#/components/schemas/NotificationType"
+        roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/Role"
+        siteScoped:
+          type: boolean
+        channel:
+          $ref: "#/components/schemas/NotificationChannel"
+        enabled:
+          type: boolean
+    NotificationRuleUpdateDto:
+      type: object
+      required: [roles, siteScoped, channel, enabled]
+      properties:
+        roles:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/Role"
+        siteScoped:
+          type: boolean
+        channel:
+          $ref: "#/components/schemas/NotificationChannel"
+        enabled:
+          type: boolean
+    DashboardEquipmentMetricsDto:
+      type: object
+      properties:
+        total: {type: integer}
+        operational: {type: integer}
+        operationalWithDefects: {type: integer}
+        underRepair: {type: integer}
+        down: {type: integer}
+        notRecorded: {type: integer}
+    DashboardInspectionMetricsDto:
+      type: object
+      properties:
+        expected: {type: integer}
+        completed: {type: integer}
+        completedWithDefects: {type: integer}
+        criticalFailure: {type: integer}
+        missing: {type: integer}
+        completionPercent: {type: number}
+    DashboardBreakdownMetricsDto:
+      type: object
+      properties:
+        reported: {type: integer}
+        completed: {type: integer}
+        open: {type: integer}
+        downtimeMinutes: {type: integer}
+        averageRepairMinutes: {type: number, nullable: true}
+    DashboardMaintenanceMetricsDto:
+      type: object
+      properties:
+        recorded: {type: integer}
+        pendingVerification: {type: integer}
+        verified: {type: integer}
+        rejected: {type: integer}
+        correctionRequested: {type: integer}
+        dueSoon: {type: integer}
+        overdue: {type: integer}
+    DashboardPartsMetricsDto:
+      type: object
+      properties:
+        openRequests: {type: integer}
+        awaitingApproval: {type: integer}
+        lowStockParts: {type: integer}
+    DashboardReportMetricsDto:
+      type: object
+      properties:
+        submitted: {type: integer}
+        awaitingApproval: {type: integer}
+        approved: {type: integer}
+        returned: {type: integer}
+    DashboardCostMetricsDto:
+      type: object
+      properties:
+        labourCost: {type: integer, format: int64}
+        partsCost: {type: integer, format: int64}
+        totalCost: {type: integer, format: int64}
+        currency: {type: string}
+    DashboardSiteMetricsDto:
+      type: object
+      properties:
+        siteId: {type: string, format: uuid}
+        siteCode: {type: string}
+        siteName: {type: string}
+        equipment: {$ref: "#/components/schemas/DashboardEquipmentMetricsDto"}
+        inspections: {$ref: "#/components/schemas/DashboardInspectionMetricsDto"}
+        breakdowns: {$ref: "#/components/schemas/DashboardBreakdownMetricsDto"}
+        maintenance: {$ref: "#/components/schemas/DashboardMaintenanceMetricsDto"}
+        parts: {$ref: "#/components/schemas/DashboardPartsMetricsDto"}
+        reports: {$ref: "#/components/schemas/DashboardReportMetricsDto"}
+        costs: {$ref: "#/components/schemas/DashboardCostMetricsDto"}
+    DashboardDto:
+      type: object
+      required: [kind, role, from, to, generatedAt]
+      properties:
+        kind: {type: string, enum: [MECHANIC, SUPERVISOR, MANAGER, EXECUTIVE]}
+        role:
+          $ref: "#/components/schemas/Role"
+        siteId: {type: string, format: uuid, nullable: true}
+        siteCode: {type: string, nullable: true}
+        siteName: {type: string, nullable: true}
+        from: {type: string, format: date-time}
+        to: {type: string, format: date-time}
+        generatedAt: {type: string, format: date-time}
+        equipment: {$ref: "#/components/schemas/DashboardEquipmentMetricsDto"}
+        inspections: {$ref: "#/components/schemas/DashboardInspectionMetricsDto"}
+        breakdowns: {$ref: "#/components/schemas/DashboardBreakdownMetricsDto"}
+        maintenance: {$ref: "#/components/schemas/DashboardMaintenanceMetricsDto"}
+        parts: {$ref: "#/components/schemas/DashboardPartsMetricsDto"}
+        reports: {$ref: "#/components/schemas/DashboardReportMetricsDto"}
+        costs: {$ref: "#/components/schemas/DashboardCostMetricsDto"}
+        sites:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardSiteMetricsDto"
+    ExportDatasetDto:
+      type: object
+      required: [dataset, formats, permission]
+      properties:
+        dataset: {type: string}
+        formats:
+          type: array
+          items: {type: string}
+        permission: {type: string}

@@ -34,6 +34,26 @@ enum class StockMovementType { RECEIPT, ISSUE, RETURN, ADJUSTMENT }
 
 enum class PersonnelType { TECHNICIAN, OPERATOR }
 
+enum class NotificationType {
+    INSPECTION_MISSING,
+    CRITICAL_DEFECT,
+    EQUIPMENT_DOWN,
+    REPAIR_ATTENTION,
+    PART_REQUEST,
+    LOW_STOCK,
+    SERVICE_DUE,
+    MAINTENANCE_VERIFY,
+    REPORT_APPROVAL,
+}
+
+enum class NotificationChannel { IN_APP, PUSH, BOTH }
+
+enum class PushPlatform { ANDROID, WEB }
+
+enum class DashboardKind { MECHANIC, SUPERVISOR, MANAGER, EXECUTIVE }
+
+enum class ExportFormat { XLSX, CSV }
+
 data class EquipmentId(
     val value: String,
 )

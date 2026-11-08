@@ -3,10 +3,14 @@ package rw.rutongo.mmems.shared.api
 import kotlinx.serialization.Serializable
 import rw.rutongo.mmems.shared.enums.Answer
 import rw.rutongo.mmems.shared.enums.BreakdownState
+import rw.rutongo.mmems.shared.enums.DashboardKind
 import rw.rutongo.mmems.shared.enums.EquipmentCondition
 import rw.rutongo.mmems.shared.enums.MaintenanceVerificationStatus
+import rw.rutongo.mmems.shared.enums.NotificationChannel
+import rw.rutongo.mmems.shared.enums.NotificationType
 import rw.rutongo.mmems.shared.enums.PartRequestState
 import rw.rutongo.mmems.shared.enums.PersonnelType
+import rw.rutongo.mmems.shared.enums.PushPlatform
 import rw.rutongo.mmems.shared.enums.ReportPeriod
 import rw.rutongo.mmems.shared.enums.ReportState
 import rw.rutongo.mmems.shared.enums.Role
@@ -839,4 +843,140 @@ import rw.rutongo.mmems.shared.enums.WorkingHoursGroupBy
     val pdfSha256: String? = null,
     val narrative: ReportNarrativeDto = ReportNarrativeDto(),
     val snapshot: DailyReportSnapshotDto,
+)
+
+@Serializable data class NotificationDto(
+    val id: String,
+    val type: NotificationType,
+    val dedupeKey: String,
+    val payload: Map<String, String> = emptyMap(),
+    val createdAt: String,
+    val readAt: String? = null,
+)
+
+@Serializable data class NotificationListDto(
+    val items: List<NotificationDto> = emptyList(),
+    val unreadCount: Int = 0,
+    val serverTime: String,
+)
+
+@Serializable data class PushDeviceRegistrationDto(
+    val token: String,
+    val platform: PushPlatform = PushPlatform.ANDROID,
+)
+
+@Serializable data class PushDeviceDto(
+    val id: String,
+    val platform: PushPlatform,
+    val createdAt: String,
+    val lastSeenAt: String,
+)
+
+@Serializable data class NotificationRuleDto(
+    val type: NotificationType,
+    val roles: List<Role>,
+    val siteScoped: Boolean,
+    val channel: NotificationChannel,
+    val enabled: Boolean,
+)
+
+@Serializable data class NotificationRuleUpdateDto(
+    val roles: List<Role>,
+    val siteScoped: Boolean,
+    val channel: NotificationChannel,
+    val enabled: Boolean,
+)
+
+@Serializable data class DashboardEquipmentMetricsDto(
+    val total: Int = 0,
+    val operational: Int = 0,
+    val operationalWithDefects: Int = 0,
+    val underRepair: Int = 0,
+    val down: Int = 0,
+    val notRecorded: Int = 0,
+)
+
+@Serializable data class DashboardInspectionMetricsDto(
+    val expected: Int = 0,
+    val completed: Int = 0,
+    val completedWithDefects: Int = 0,
+    val criticalFailure: Int = 0,
+    val missing: Int = 0,
+    val completionPercent: Double = 0.0,
+)
+
+@Serializable data class DashboardBreakdownMetricsDto(
+    val reported: Int = 0,
+    val completed: Int = 0,
+    val open: Int = 0,
+    val downtimeMinutes: Int = 0,
+    val averageRepairMinutes: Double? = null,
+)
+
+@Serializable data class DashboardMaintenanceMetricsDto(
+    val recorded: Int = 0,
+    val pendingVerification: Int = 0,
+    val verified: Int = 0,
+    val rejected: Int = 0,
+    val correctionRequested: Int = 0,
+    val dueSoon: Int = 0,
+    val overdue: Int = 0,
+)
+
+@Serializable data class DashboardPartsMetricsDto(
+    val openRequests: Int = 0,
+    val awaitingApproval: Int = 0,
+    val lowStockParts: Int = 0,
+)
+
+@Serializable data class DashboardReportMetricsDto(
+    val submitted: Int = 0,
+    val awaitingApproval: Int = 0,
+    val approved: Int = 0,
+    val returned: Int = 0,
+)
+
+@Serializable data class DashboardCostMetricsDto(
+    val labourCost: Long = 0,
+    val partsCost: Long = 0,
+    val totalCost: Long = 0,
+    val currency: String = "USD",
+)
+
+@Serializable data class DashboardSiteMetricsDto(
+    val siteId: String,
+    val siteCode: String,
+    val siteName: String,
+    val equipment: DashboardEquipmentMetricsDto = DashboardEquipmentMetricsDto(),
+    val inspections: DashboardInspectionMetricsDto = DashboardInspectionMetricsDto(),
+    val breakdowns: DashboardBreakdownMetricsDto = DashboardBreakdownMetricsDto(),
+    val maintenance: DashboardMaintenanceMetricsDto = DashboardMaintenanceMetricsDto(),
+    val parts: DashboardPartsMetricsDto = DashboardPartsMetricsDto(),
+    val reports: DashboardReportMetricsDto = DashboardReportMetricsDto(),
+    val costs: DashboardCostMetricsDto? = null,
+)
+
+@Serializable data class DashboardDto(
+    val kind: DashboardKind,
+    val role: Role,
+    val siteId: String? = null,
+    val siteCode: String? = null,
+    val siteName: String? = null,
+    val from: String,
+    val to: String,
+    val generatedAt: String,
+    val equipment: DashboardEquipmentMetricsDto = DashboardEquipmentMetricsDto(),
+    val inspections: DashboardInspectionMetricsDto = DashboardInspectionMetricsDto(),
+    val breakdowns: DashboardBreakdownMetricsDto = DashboardBreakdownMetricsDto(),
+    val maintenance: DashboardMaintenanceMetricsDto = DashboardMaintenanceMetricsDto(),
+    val parts: DashboardPartsMetricsDto = DashboardPartsMetricsDto(),
+    val reports: DashboardReportMetricsDto = DashboardReportMetricsDto(),
+    val costs: DashboardCostMetricsDto? = null,
+    val sites: List<DashboardSiteMetricsDto> = emptyList(),
+)
+
+@Serializable data class ExportDatasetDto(
+    val dataset: String,
+    val formats: List<String>,
+    val permission: String,
 )

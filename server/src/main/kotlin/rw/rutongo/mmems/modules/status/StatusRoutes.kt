@@ -5,7 +5,6 @@ import io.ktor.server.application.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import rw.rutongo.mmems.ApiError
 import rw.rutongo.mmems.identity.IdentityService
@@ -103,38 +102,6 @@ fun Route.statusRoutes(
                 call.respond(service.activeProblems(actor, site, call.request.queryParameters["limit"]?.toIntOrNull() ?: 100))
             } catch (e: rw.rutongo.mmems.identity.AuthFailure) {
                 call.respond(HttpStatusCode.Forbidden, ApiError(e.code, "Active problems are unavailable."))
-            }
-        }
-        get("/events") {
-            val actor = call.authenticated(identity, signer) ?: return@get
-            val lastEventId = call.request.headers["Last-Event-ID"]
-            val parts = lastEventId?.split('|')
-            val since = parts?.getOrNull(0)?.let { runCatching { Instant.parse(it) }.getOrNull() }
-            val sinceId = parts?.getOrNull(1)?.let { runCatching { UUID.fromString(it) }.getOrNull() }
-            if (lastEventId != null && (since == null || sinceId == null)) {
-                call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_LAST_EVENT_ID", "Last-Event-ID is invalid."))
-                return@get
-            }
-            call.response.header(HttpHeaders.CacheControl, "no-cache")
-            call.response.header("X-Accel-Buffering", "no")
-            call.respondTextWriter(contentType = ContentType.Text.EventStream) {
-                var cursorAt = since
-                var cursorId = sinceId
-                while (true) {
-                    val events = service.eventsAfter(actor, cursorAt, cursorId)
-                    if (events.isEmpty()) {
-                        write(": keep-alive\n\n")
-                        flush()
-                        delay(20_000)
-                    } else {
-                        events.forEach { event ->
-                            write("id: ${event.recordedAt}|${event.id}\nevent: equipment-status\ndata: ${kotlinx.serialization.json.Json.encodeToString(StatusEventView.serializer(),event)}\n\n")
-                            flush()
-                            cursorAt = Instant.parse(event.recordedAt)
-                            cursorId = UUID.fromString(event.id)
-                        }
-                    }
-                }
             }
         }
     }
