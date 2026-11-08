@@ -3,8 +3,11 @@ package rw.rutongo.mmems.shared.api
 import kotlinx.serialization.Serializable
 import rw.rutongo.mmems.shared.enums.Answer
 import rw.rutongo.mmems.shared.enums.BreakdownState
+import rw.rutongo.mmems.shared.enums.MaintenanceVerificationStatus
 import rw.rutongo.mmems.shared.enums.Role
+import rw.rutongo.mmems.shared.enums.ServiceStatus
 import rw.rutongo.mmems.shared.enums.Severity
+import rw.rutongo.mmems.shared.enums.WorkingHoursGroupBy
 
 @Serializable data class LoginRequest(
     val username: String,
@@ -205,6 +208,120 @@ import rw.rutongo.mmems.shared.enums.Severity
     val defectIds: List<String> = emptyList(),
     val photoIds: List<String> = emptyList(),
     val version: Long,
+)
+
+@Serializable data class MaintenanceCreateDto(
+    val equipmentId: String,
+    val serviceTypeId: String,
+    val tunnelId: String? = null,
+    val performedAt: String? = null,
+    val engineHours: Double? = null,
+    val workPerformed: String,
+    val cause: String? = null,
+    val technicianId: String,
+    val supervisorId: String? = null,
+    val breakdownId: String? = null,
+    val replacedComponents: List<String> = emptyList(),
+    val downtimeMinutes: Int? = null,
+    val labourCost: Long = 0,
+    val partsCost: Long = 0,
+    val currency: String = "RWF",
+    val notes: String? = null,
+)
+
+@Serializable data class MaintenanceActionDto(
+    val comment: String? = null,
+)
+
+@Serializable data class MaintenanceViewDto(
+    val id: String,
+    val equipmentId: String,
+    val equipmentCode: String,
+    val equipmentName: String,
+    val serviceTypeId: String,
+    val serviceTypeCode: String,
+    val serviceTypeName: String,
+    val siteId: String,
+    val siteName: String,
+    val tunnelId: String? = null,
+    val performedAt: String,
+    val engineHours: Double? = null,
+    val workPerformed: String,
+    val cause: String? = null,
+    val technicianId: String,
+    val technicianName: String,
+    val supervisorId: String? = null,
+    val breakdownId: String? = null,
+    val replacedComponents: List<String> = emptyList(),
+    val downtimeMinutes: Int? = null,
+    val labourCost: Long = 0,
+    val partsCost: Long = 0,
+    val totalCost: Long = 0,
+    val currency: String,
+    val verificationStatus: MaintenanceVerificationStatus,
+    val verifiedBy: String? = null,
+    val verifiedAt: String? = null,
+    val verificationComment: String? = null,
+    val notes: String? = null,
+    val version: Long,
+)
+
+@Serializable data class ServiceScheduleViewDto(
+    val intervalId: String,
+    val equipmentId: String,
+    val equipmentCode: String,
+    val equipmentName: String,
+    val siteId: String,
+    val serviceTypeId: String,
+    val serviceTypeCode: String,
+    val serviceTypeName: String,
+    val intervalHours: Int,
+    val dueSoonThresholdHours: Int,
+    val current: Double? = null,
+    val lastVerified: Double? = null,
+    val lastVerifiedAt: String? = null,
+    val nextDue: Double? = null,
+    val remaining: Double? = null,
+    val status: ServiceStatus,
+)
+
+@Serializable data class WorkingHoursEntryDto(
+    val inspectionId: String,
+    val equipmentId: String,
+    val equipmentCode: String,
+    val equipmentName: String,
+    val siteId: String,
+    val siteName: String,
+    val shiftId: String,
+    val shiftCode: String,
+    val reportDate: String,
+    val hoursStart: Double? = null,
+    val hoursEnd: Double? = null,
+    val recordedHours: Double? = null,
+    val status: String,
+)
+
+@Serializable data class WorkingHoursGroupDto(
+    val key: String,
+    val siteId: String? = null,
+    val siteName: String? = null,
+    val equipmentId: String? = null,
+    val equipmentCode: String? = null,
+    val equipmentName: String? = null,
+    val shiftId: String? = null,
+    val shiftCode: String? = null,
+    val reportDate: String? = null,
+    val recordedHours: Double,
+    val entryCount: Int,
+    val overlapEntries: Int = 0,
+    val missingReadings: Int = 0,
+)
+
+@Serializable data class WorkingHoursResponseDto(
+    val groupBy: WorkingHoursGroupBy,
+    val entries: List<WorkingHoursEntryDto>,
+    val groups: List<WorkingHoursGroupDto>,
+    val totalRecordedHours: Double,
 )
 
 @Serializable data class PhotoDto(

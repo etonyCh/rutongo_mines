@@ -27,10 +27,14 @@ import rw.rutongo.mmems.modules.inspection.InspectionScheduler
 import rw.rutongo.mmems.modules.inspection.InspectionService
 import rw.rutongo.mmems.modules.inspection.MarkMissingJob
 import rw.rutongo.mmems.modules.inspection.inspectionRoutes
+import rw.rutongo.mmems.modules.maintenance.MaintenanceService
+import rw.rutongo.mmems.modules.maintenance.maintenanceRoutes
 import rw.rutongo.mmems.modules.photo.PhotoService
 import rw.rutongo.mmems.modules.photo.photoRoutes
 import rw.rutongo.mmems.modules.status.StatusService
 import rw.rutongo.mmems.modules.status.statusRoutes
+import rw.rutongo.mmems.modules.workinghours.WorkingHoursService
+import rw.rutongo.mmems.modules.workinghours.workingHoursRoutes
 import rw.rutongo.mmems.platform.BlobStore
 import rw.rutongo.mmems.platform.Clock
 import rw.rutongo.mmems.platform.PrivateFileBlobStore
@@ -69,6 +73,8 @@ fun Application.module() {
     val statuses = StatusService(dataSource)
     val inspections = InspectionService(dataSource)
     val breakdowns = BreakdownService(dataSource)
+    val maintenance = MaintenanceService(dataSource)
+    val workingHours = WorkingHoursService(dataSource)
     val blobStore = PrivateFileBlobStore(Path.of(System.getenv("BLOB_STORAGE_DIR") ?: "data/blobs"))
     val photos = PhotoService(dataSource, blobStore)
     val inspectionScheduler = InspectionScheduler(dataSource, GenerateExpectationsJob(dataSource), MarkMissingJob(dataSource))
@@ -112,6 +118,8 @@ fun Application.module() {
         statusRoutes(statuses, identity, signer)
         inspectionRoutes(inspections, identity, signer)
         breakdownRoutes(breakdowns, identity, signer)
+        maintenanceRoutes(maintenance, identity, signer)
+        workingHoursRoutes(workingHours, identity, signer)
         photoRoutes(photos, identity, signer)
     }
 }

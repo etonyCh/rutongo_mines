@@ -22,6 +22,12 @@ enum class ReportState { DRAFT, SUBMITTED, RETURNED_FOR_CORRECTION, RESUBMITTED,
 
 enum class ServiceStatus { OK, DUE_SOON, OVERDUE, NO_VERIFIED_SERVICE, NOT_RECORDED }
 
+enum class MaintenanceVerificationStatus { DRAFT, PENDING_VERIFICATION, VERIFIED, REJECTED, CORRECTION_REQUESTED }
+
+enum class MaintenanceAction { VERIFY, REJECT, REQUEST_CORRECTION }
+
+enum class WorkingHoursGroupBy { SITE, EQUIPMENT, SHIFT, DAY }
+
 data class EquipmentId(
     val value: String,
 )

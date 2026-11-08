@@ -86,4 +86,23 @@ class ArchitectureTest {
                 }
         }
     }
+
+    @Test
+    fun `maintenance and working hours domains depend only on shared`() {
+        with(KoArchitectureCreator) {
+            Konsist
+                .scopeFromProduction()
+                .assertArchitecture {
+                    val shared = Layer("Shared", "rw.rutongo.mmems.shared..")
+                    val platform = Layer("Platform", "rw.rutongo.mmems.platform..")
+                    val identity = Layer("Identity", "rw.rutongo.mmems.identity..")
+                    val maintenanceDomain = Layer("Maintenance domain", "rw.rutongo.mmems.modules.maintenance.domain..")
+                    val workingHoursDomain = Layer("Working hours domain", "rw.rutongo.mmems.modules.workinghours.domain..")
+
+                    maintenanceDomain.dependsOn(shared, strict = true)
+                    maintenanceDomain.doesNotDependOn(identity, platform)
+                    workingHoursDomain.dependsOnNothing()
+                }
+        }
+    }
 }

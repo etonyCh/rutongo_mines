@@ -22,6 +22,8 @@ tags:
   - name: Inspections
   - name: Defects
   - name: Breakdowns
+  - name: Maintenance
+  - name: WorkingHours
   - name: Photos
 
 paths:
@@ -1472,6 +1474,284 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+
+  /api/v1/maintenance:
+    get:
+      tags: [Maintenance]
+      summary: List maintenance records visible to the caller
+      parameters:
+        - $ref: "#/components/parameters/SiteIdQuery"
+        - name: equipmentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/MaintenanceVerificationStatus"
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Maintenance records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MaintenanceView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Maintenance]
+      summary: Record maintenance work
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+            maxLength: 200
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MaintenanceCreateRequest"
+      responses:
+        "201":
+          description: Maintenance recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Idempotency replay conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/maintenance/{id}/verify:
+    post:
+      tags: [Maintenance]
+      summary: Verify a maintenance record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MaintenanceActionRequest"
+      responses:
+        "200":
+          description: Maintenance verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict or invalid verification transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/maintenance/{id}/reject:
+    post:
+      tags: [Maintenance]
+      summary: Reject a maintenance record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MaintenanceActionRequest"
+      responses:
+        "200":
+          description: Maintenance rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict or invalid verification transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/maintenance/{id}/request-correction:
+    post:
+      tags: [Maintenance]
+      summary: Request corrections to a maintenance record
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MaintenanceActionRequest"
+      responses:
+        "200":
+          description: Correction requested
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MaintenanceView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict or invalid verification transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/service-schedule:
+    get:
+      tags: [Maintenance]
+      summary: List hour-based service intervals and their due status
+      parameters:
+        - $ref: "#/components/parameters/SiteIdQuery"
+        - name: equipmentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Service schedule
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServiceScheduleView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v1/equipment/{id}/service-status:
+    get:
+      tags: [Maintenance]
+      summary: List the service status of one equipment item
+      parameters:
+        - $ref: "#/components/parameters/EquipmentId"
+      responses:
+        "200":
+          description: Service status per applicable interval
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServiceScheduleView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/working-hours:
+    get:
+      tags: [WorkingHours]
+      summary: List recorded working hours without summing raw meter readings
+      parameters:
+        - $ref: "#/components/parameters/SiteIdQuery"
+        - name: equipmentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: shiftId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: groupBy
+          in: query
+          schema:
+            $ref: "#/components/schemas/WorkingHoursGroupBy"
+      responses:
+        "200":
+          description: Working hours and grouped union totals
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WorkingHoursResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
 
 components:
   securitySchemes:
@@ -2952,3 +3232,340 @@ components:
         version:
           type: integer
           format: int64
+
+    MaintenanceVerificationStatus:
+      type: string
+      enum: [DRAFT, PENDING_VERIFICATION, VERIFIED, REJECTED, CORRECTION_REQUESTED]
+
+    MaintenanceCreateRequest:
+      type: object
+      required: [equipmentId, serviceTypeId, workPerformed, technicianId]
+      properties:
+        equipmentId:
+          type: string
+          format: uuid
+        serviceTypeId:
+          type: string
+          format: uuid
+        tunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        performedAt:
+          type: string
+          format: date-time
+          nullable: true
+        engineHours:
+          type: number
+          format: double
+          nullable: true
+        workPerformed:
+          type: string
+        cause:
+          type: string
+          nullable: true
+        technicianId:
+          type: string
+          format: uuid
+        supervisorId:
+          type: string
+          format: uuid
+          nullable: true
+        breakdownId:
+          type: string
+          format: uuid
+          nullable: true
+        replacedComponents:
+          type: array
+          items:
+            type: string
+        downtimeMinutes:
+          type: integer
+          nullable: true
+        labourCost:
+          type: integer
+          format: int64
+          default: 0
+        partsCost:
+          type: integer
+          format: int64
+          default: 0
+        currency:
+          type: string
+          minLength: 3
+          maxLength: 3
+          default: RWF
+        notes:
+          type: string
+          nullable: true
+
+    MaintenanceActionRequest:
+      type: object
+      description: A comment is required for reject and request-correction decisions.
+      properties:
+        comment:
+          type: string
+          nullable: true
+          maxLength: 2000
+
+    MaintenanceView:
+      type: object
+      required:
+        [id, equipmentId, equipmentCode, equipmentName, serviceTypeId, serviceTypeCode, serviceTypeName,
+         siteId, siteName, performedAt, workPerformed, technicianId, technicianName, labourCost, partsCost,
+         totalCost, currency, verificationStatus, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        equipmentId:
+          type: string
+          format: uuid
+        equipmentCode:
+          type: string
+        equipmentName:
+          type: string
+        serviceTypeId:
+          type: string
+          format: uuid
+        serviceTypeCode:
+          type: string
+        serviceTypeName:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+        siteName:
+          type: string
+        tunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        performedAt:
+          type: string
+          format: date-time
+        engineHours:
+          type: number
+          format: double
+          nullable: true
+        workPerformed:
+          type: string
+        cause:
+          type: string
+          nullable: true
+        technicianId:
+          type: string
+          format: uuid
+        technicianName:
+          type: string
+        supervisorId:
+          type: string
+          format: uuid
+          nullable: true
+        breakdownId:
+          type: string
+          format: uuid
+          nullable: true
+        replacedComponents:
+          type: array
+          items:
+            type: string
+        downtimeMinutes:
+          type: integer
+          nullable: true
+        labourCost:
+          type: integer
+          format: int64
+        partsCost:
+          type: integer
+          format: int64
+        totalCost:
+          type: integer
+          format: int64
+        currency:
+          type: string
+        verificationStatus:
+          $ref: "#/components/schemas/MaintenanceVerificationStatus"
+        verifiedBy:
+          type: string
+          format: uuid
+          nullable: true
+        verifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+        verificationComment:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        version:
+          type: integer
+          format: int64
+
+    ServiceStatus:
+      type: string
+      enum: [OK, DUE_SOON, OVERDUE, NO_VERIFIED_SERVICE, NOT_RECORDED]
+
+    ServiceScheduleView:
+      type: object
+      required:
+        [intervalId, equipmentId, equipmentCode, equipmentName, siteId, serviceTypeId, serviceTypeCode,
+         serviceTypeName, intervalHours, dueSoonThresholdHours, status]
+      properties:
+        intervalId:
+          type: string
+          format: uuid
+        equipmentId:
+          type: string
+          format: uuid
+        equipmentCode:
+          type: string
+        equipmentName:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+        serviceTypeId:
+          type: string
+          format: uuid
+        serviceTypeCode:
+          type: string
+        serviceTypeName:
+          type: string
+        intervalHours:
+          type: integer
+        dueSoonThresholdHours:
+          type: integer
+        current:
+          type: number
+          format: double
+          nullable: true
+        lastVerified:
+          type: number
+          format: double
+          nullable: true
+        lastVerifiedAt:
+          type: string
+          format: date-time
+          nullable: true
+        nextDue:
+          type: number
+          format: double
+          nullable: true
+        remaining:
+          type: number
+          format: double
+          nullable: true
+        status:
+          $ref: "#/components/schemas/ServiceStatus"
+
+    WorkingHoursGroupBy:
+      type: string
+      enum: [SITE, EQUIPMENT, SHIFT, DAY]
+
+    WorkingHoursEntry:
+      type: object
+      required: [inspectionId, equipmentId, equipmentCode, equipmentName, siteId, siteName, shiftId, shiftCode, reportDate, status]
+      properties:
+        inspectionId:
+          type: string
+          format: uuid
+        equipmentId:
+          type: string
+          format: uuid
+        equipmentCode:
+          type: string
+        equipmentName:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+        siteName:
+          type: string
+        shiftId:
+          type: string
+          format: uuid
+        shiftCode:
+          type: string
+        reportDate:
+          type: string
+          format: date
+        hoursStart:
+          type: number
+          format: double
+          nullable: true
+        hoursEnd:
+          type: number
+          format: double
+          nullable: true
+        recordedHours:
+          type: number
+          format: double
+          nullable: true
+        status:
+          type: string
+          enum: [VALID, MISSING_READING, SUSPICIOUS, OVERLAP, CORRECTED]
+
+    WorkingHoursGroup:
+      type: object
+      required: [key, recordedHours, entryCount]
+      properties:
+        key:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+          nullable: true
+        siteName:
+          type: string
+          nullable: true
+        equipmentId:
+          type: string
+          format: uuid
+          nullable: true
+        equipmentCode:
+          type: string
+          nullable: true
+        equipmentName:
+          type: string
+          nullable: true
+        shiftId:
+          type: string
+          format: uuid
+          nullable: true
+        shiftCode:
+          type: string
+          nullable: true
+        reportDate:
+          type: string
+          format: date
+          nullable: true
+        recordedHours:
+          type: number
+          format: double
+        entryCount:
+          type: integer
+        overlapEntries:
+          type: integer
+        missingReadings:
+          type: integer
+
+    WorkingHoursResponse:
+      type: object
+      required: [groupBy, entries, groups, totalRecordedHours]
+      properties:
+        groupBy:
+          $ref: "#/components/schemas/WorkingHoursGroupBy"
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkingHoursEntry"
+        groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkingHoursGroup"
+        totalRecordedHours:
+          type: number
+          format: double
