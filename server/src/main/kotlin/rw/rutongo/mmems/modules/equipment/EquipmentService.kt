@@ -75,16 +75,6 @@ import javax.sql.DataSource
     val effectiveTo: String?,
 )
 
-@Serializable data class PersonnelView(
-    val id: String,
-    val employeeId: String,
-    val name: String,
-    val siteId: String?,
-    val tunnelId: String?,
-    val shiftId: String?,
-    val active: Boolean,
-)
-
 class EquipmentService(
     private val dataSource: DataSource,
 ) {
@@ -432,24 +422,6 @@ class EquipmentService(
         }
         return EquipmentTypeView(id.toString(), name.trim(), "MANUAL", true)
     }
-
-    fun technicians(user: Principal): List<PersonnelView> = personnel(user, "technician", "eid")
-
-    fun operators(user: Principal): List<PersonnelView> = personnel(user, "operator", "employee_id")
-
-    private fun personnel(
-        user: Principal,
-        table: String,
-        key: String,
-    ): List<PersonnelView> =
-        dataSource.connection.use { c ->
-            c.prepareStatement("select p.id,p.$key employee_id,p.name,p.site_id,p.tunnel_id,p.shift_id,p.active from $table p where p.site_id is null or exists(select 1 from user_site_access a where a.user_id=? and a.site_id=p.site_id) or (? and not exists(select 1 from user_site_access a where a.user_id=?)) order by p.name").use { ps ->
-                ps.setObject(1, user.id)
-                ps.setBoolean(2, user.role in broadRoles)
-                ps.setObject(3, user.id)
-                ps.executeQuery().use { rs -> buildList { while (rs.next()) add(PersonnelView(rs.getObject("id", UUID::class.java).toString(), rs.getString("employee_id"), rs.getString("name"), rs.getObject("site_id", UUID::class.java)?.toString(), rs.getObject("tunnel_id", UUID::class.java)?.toString(), rs.getObject("shift_id", UUID::class.java)?.toString(), rs.getBoolean("active"))) } }
-            }
-        }
 
     fun equipment(
         user: Principal,

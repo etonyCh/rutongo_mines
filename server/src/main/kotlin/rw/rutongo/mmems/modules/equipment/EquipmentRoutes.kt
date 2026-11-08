@@ -11,7 +11,6 @@ import rw.rutongo.mmems.identity.IdentityService
 import rw.rutongo.mmems.identity.RolePermissions
 import rw.rutongo.mmems.identity.TokenSigner
 import rw.rutongo.mmems.identity.authenticated
-import rw.rutongo.mmems.shared.enums.Role
 import java.math.BigDecimal
 import java.time.LocalDate
 import java.time.LocalTime
@@ -274,22 +273,6 @@ fun Route.equipmentRoutes(
             } catch (e: rw.rutongo.mmems.identity.AuthFailure) {
                 call.respond(HttpStatusCode.Conflict, ApiError(e.code, "The equipment type already exists."))
             }
-        }
-        get("/technicians") {
-            val user = call.authenticated(identity, signer) ?: return@get
-            if (user.role == Role.MECHANIC) {
-                call.respond(HttpStatusCode.Forbidden, ApiError("FORBIDDEN", "This role cannot view the personnel directory."))
-                return@get
-            }
-            call.respond(service.technicians(user))
-        }
-        get("/operators") {
-            val user = call.authenticated(identity, signer) ?: return@get
-            if (user.role == Role.MECHANIC) {
-                call.respond(HttpStatusCode.Forbidden, ApiError("FORBIDDEN", "This role cannot view the personnel directory."))
-                return@get
-            }
-            call.respond(service.operators(user))
         }
         post("/equipment") {
             val user = call.authenticated(identity, signer) ?: return@post

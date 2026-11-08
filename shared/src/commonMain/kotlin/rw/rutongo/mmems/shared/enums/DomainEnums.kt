@@ -28,6 +28,12 @@ enum class MaintenanceAction { VERIFY, REJECT, REQUEST_CORRECTION }
 
 enum class WorkingHoursGroupBy { SITE, EQUIPMENT, SHIFT, DAY }
 
+enum class PartRequestState { REQUESTED, APPROVED, REJECTED, ISSUED, USED, RETURNED }
+
+enum class StockMovementType { RECEIPT, ISSUE, RETURN, ADJUSTMENT }
+
+enum class PersonnelType { TECHNICIAN, OPERATOR }
+
 data class EquipmentId(
     val value: String,
 )

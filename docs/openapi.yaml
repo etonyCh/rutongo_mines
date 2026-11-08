@@ -25,6 +25,8 @@ tags:
   - name: Maintenance
   - name: WorkingHours
   - name: Photos
+  - name: Parts
+  - name: Personnel
 
 paths:
   /health:
@@ -529,8 +531,25 @@ paths:
 
   /api/v1/technicians:
     get:
-      tags: [Organization]
+      tags: [Personnel]
       summary: List technicians
+      description: Requires PERSONNEL_VIEW. Results are restricted to the caller's site scope.
+      parameters:
+        - $ref: "#/components/parameters/SiteIdQuery"
+        - name: activeOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
       responses:
         "200":
           description: Technicians
@@ -539,14 +558,92 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/PersonnelView"
+                  $ref: "#/components/schemas/TechnicianView"
         "403":
           $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Personnel]
+      summary: Create a technician
+      description: Requires PERSONNEL_MANAGE.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TechnicianCreateRequest"
+      responses:
+        "201":
+          description: Technician created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TechnicianView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Employee ID already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/technicians/{id}:
+    put:
+      tags: [Personnel]
+      summary: Update a technician
+      description: Requires PERSONNEL_MANAGE and an If-Match version.
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TechnicianUpdateRequest"
+      responses:
+        "200":
+          description: Technician updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TechnicianView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 
   /api/v1/operators:
     get:
-      tags: [Organization]
+      tags: [Personnel]
       summary: List operators
+      description: Requires PERSONNEL_VIEW. Results are restricted to the caller's site scope.
+      parameters:
+        - $ref: "#/components/parameters/SiteIdQuery"
+        - name: activeOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
       responses:
         "200":
           description: Operators
@@ -555,9 +652,190 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/PersonnelView"
+                  $ref: "#/components/schemas/OperatorView"
         "403":
           $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Personnel]
+      summary: Create an operator
+      description: Requires PERSONNEL_MANAGE.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OperatorCreateRequest"
+      responses:
+        "201":
+          description: Operator created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperatorView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Employee ID already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/operators/{id}:
+    put:
+      tags: [Personnel]
+      summary: Update an operator
+      description: Requires PERSONNEL_MANAGE and an If-Match version.
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OperatorUpdateRequest"
+      responses:
+        "200":
+          description: Operator updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperatorView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/assignments:
+    get:
+      tags: [Personnel]
+      summary: List personnel-to-equipment assignments
+      description: Requires PERSONNEL_VIEW. Results are restricted to the caller's site scope.
+      parameters:
+        - name: personType
+          in: query
+          schema:
+            $ref: "#/components/schemas/PersonnelType"
+        - name: personId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: equipmentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: openOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: Assignments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AssignmentView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Personnel]
+      summary: Assign a technician or operator to equipment
+      description: Requires PERSONNEL_MANAGE. A new assignment closes the previous open holder on the same equipment.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignmentCreateRequest"
+      responses:
+        "201":
+          description: Assignment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AssignmentView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/transfers:
+    get:
+      tags: [Personnel]
+      summary: List personnel transfers
+      description: Requires PERSONNEL_VIEW. Results are restricted to transfers into the caller's site scope.
+      parameters:
+        - name: personType
+          in: query
+          schema:
+            $ref: "#/components/schemas/PersonnelType"
+        - name: personId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: Personnel transfers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PersonnelTransferView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Personnel]
+      summary: Transfer a technician or operator to another site
+      description: Requires PERSONNEL_MANAGE. The transfer is immutable and closes open equipment assignments when the site changes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PersonnelTransferCreateRequest"
+      responses:
+        "201":
+          description: Transfer recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PersonnelTransferView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /api/v1/equipment:
     get:
@@ -1935,6 +2213,438 @@ paths:
         "403":
           $ref: "#/components/responses/Forbidden"
 
+  /api/v1/parts:
+    get:
+      tags: [Parts]
+      summary: List parts with current stock
+      description: Requires PART_REQUEST, PART_APPROVE, PART_ISSUE or PART_MANAGE. Unit costs are only returned to callers with COST_VIEW.
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: lowStock
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: includeInactive
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: Parts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PartView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Parts]
+      summary: Create a part
+      description: Requires PART_MANAGE.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartCreateRequest"
+      responses:
+        "201":
+          description: Part created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Part number already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/parts/low-stock:
+    get:
+      tags: [Parts]
+      summary: List parts at or below their minimum stock
+      description: Requires PART_REQUEST, PART_APPROVE, PART_ISSUE or PART_MANAGE.
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: Low-stock parts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PartView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v1/parts/{id}:
+    get:
+      tags: [Parts]
+      summary: Read one part with per-location stock
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+      responses:
+        "200":
+          description: Part
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Parts]
+      summary: Update a part
+      description: Requires PART_MANAGE and an If-Match version.
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartUpdateRequest"
+      responses:
+        "200":
+          description: Part updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/stock-movements:
+    get:
+      tags: [Parts]
+      summary: List immutable stock movements
+      description: Requires PART_APPROVE, PART_ISSUE or PART_MANAGE.
+      parameters:
+        - name: partId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: requestId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: Stock movements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StockMovementView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Parts]
+      summary: Record a receipt or adjustment
+      description: Requires PART_MANAGE. Issues and returns must use a part request. Stock is the sum of immutable movements.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockMovementCreateRequest"
+      responses:
+        "201":
+          description: Stock movement recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockMovementView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Stock would become negative
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/part-requests:
+    get:
+      tags: [Parts]
+      summary: List part requests
+      description: Mechanics see their own requests; approval, issue and catalogue roles see the site scope.
+      parameters:
+        - $ref: "#/components/parameters/SiteIdQuery"
+        - name: state
+          in: query
+          schema:
+            $ref: "#/components/schemas/PartRequestState"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 100
+      responses:
+        "200":
+          description: Part requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PartRequestView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Parts]
+      summary: Create a part request
+      description: Requires PART_REQUEST and an Idempotency-Key. Creating or approving a request never changes stock.
+      parameters:
+        - name: Idempotency-Key
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartRequestCreateRequest"
+      responses:
+        "201":
+          description: Part request created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartRequestView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/part-requests/{id}/approve:
+    post:
+      tags: [Parts]
+      summary: Approve a part request
+      description: Requires PART_APPROVE and an If-Match version.
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartRequestDecisionRequest"
+      responses:
+        "200":
+          description: Request approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartRequestView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict or invalid transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/part-requests/{id}/reject:
+    post:
+      tags: [Parts]
+      summary: Reject a part request
+      description: Requires PART_APPROVE, a rejection comment and an If-Match version.
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartRequestDecisionRequest"
+      responses:
+        "200":
+          description: Request rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartRequestView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict or invalid transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/part-requests/{id}/issue:
+    post:
+      tags: [Parts]
+      summary: Issue parts from stock
+      description: Requires PART_ISSUE and an If-Match version. An empty body issues every requested line.
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartRequestQuantityActionRequest"
+      responses:
+        "200":
+          description: Request issued and stock movements recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartRequestView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict, invalid transition or insufficient stock
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/part-requests/{id}/use:
+    post:
+      tags: [Parts]
+      summary: Record used quantities
+      description: Available to the requester, PART_ISSUE and PART_APPROVE roles. Does not move stock again. An empty body uses every outstanding issued line.
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartRequestQuantityActionRequest"
+      responses:
+        "200":
+          description: Request marked used
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartRequestView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict or invalid transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/part-requests/{id}/return:
+    post:
+      tags: [Parts]
+      summary: Return unused parts to stock
+      description: Available to the requester, PART_ISSUE and PART_APPROVE roles. An empty body returns every outstanding issued line.
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PartRequestQuantityActionRequest"
+      responses:
+        "200":
+          description: Return movements recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PartRequestView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict or invalid transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1943,6 +2653,13 @@ components:
       bearerFormat: JWT
 
   parameters:
+    EntityId:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
     IfMatch:
       name: If-Match
       in: header
@@ -2388,32 +3105,6 @@ components:
       properties:
         name:
           type: string
-
-    PersonnelView:
-      type: object
-      required: [id, employeeId, name, active]
-      properties:
-        id:
-          type: string
-          format: uuid
-        employeeId:
-          type: string
-        name:
-          type: string
-        siteId:
-          type: string
-          format: uuid
-          nullable: true
-        tunnelId:
-          type: string
-          format: uuid
-          nullable: true
-        shiftId:
-          type: string
-          format: uuid
-          nullable: true
-        active:
-          type: boolean
 
     EquipmentSummary:
       type: object
@@ -3905,3 +4596,661 @@ components:
         totalRecordedHours:
           type: number
           format: double
+    PartRequestState:
+      type: string
+      enum: [REQUESTED, APPROVED, REJECTED, ISSUED, USED, RETURNED]
+
+    StockMovementType:
+      type: string
+      enum: [RECEIPT, ISSUE, RETURN, ADJUSTMENT]
+
+    PersonnelType:
+      type: string
+      enum: [TECHNICIAN, OPERATOR]
+
+    PartStockView:
+      type: object
+      required: [location, onHand]
+      properties:
+        location:
+          type: string
+        onHand:
+          type: integer
+
+    PartView:
+      type: object
+      required: [id, partNumber, description, unit, minStock, active, onHand, lowStock, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        partNumber:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          nullable: true
+        unit:
+          type: string
+        minStock:
+          type: integer
+        unitCost:
+          type: integer
+          format: int64
+          nullable: true
+          description: Only returned to callers with COST_VIEW.
+        active:
+          type: boolean
+        onHand:
+          type: integer
+        lowStock:
+          type: boolean
+        locations:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartStockView"
+        version:
+          type: integer
+          format: int64
+
+    PartCreateRequest:
+      type: object
+      required: [partNumber, description]
+      properties:
+        partNumber:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+          nullable: true
+        unit:
+          type: string
+          default: UNIT
+        minStock:
+          type: integer
+          minimum: 0
+          default: 0
+        unitCost:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+
+    PartUpdateRequest:
+      type: object
+      required: [description]
+      properties:
+        description:
+          type: string
+        category:
+          type: string
+          nullable: true
+        unit:
+          type: string
+          default: UNIT
+        minStock:
+          type: integer
+          minimum: 0
+          default: 0
+        unitCost:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+        active:
+          type: boolean
+          default: true
+
+    StockMovementCreateRequest:
+      type: object
+      required: [partId, quantity, type]
+      properties:
+        partId:
+          type: string
+          format: uuid
+        location:
+          type: string
+          default: MAIN
+        quantity:
+          type: integer
+          description: Signed stored quantity. Receipts must be positive; adjustments may be positive or negative.
+        type:
+          $ref: "#/components/schemas/StockMovementType"
+        reason:
+          type: string
+          nullable: true
+
+    StockMovementView:
+      type: object
+      required: [id, partId, partNumber, location, quantity, type, userId, occurredAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        partId:
+          type: string
+          format: uuid
+        partNumber:
+          type: string
+        location:
+          type: string
+        quantity:
+          type: integer
+        type:
+          $ref: "#/components/schemas/StockMovementType"
+        requestId:
+          type: string
+          format: uuid
+          nullable: true
+        userId:
+          type: string
+          format: uuid
+        occurredAt:
+          type: string
+          format: date-time
+        reason:
+          type: string
+          nullable: true
+
+    PartRequestLineCreateRequest:
+      type: object
+      required: [partId, quantity]
+      properties:
+        partId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+        location:
+          type: string
+          default: MAIN
+        notes:
+          type: string
+          nullable: true
+
+    PartRequestCreateRequest:
+      type: object
+      required: [siteId, lines]
+      properties:
+        siteId:
+          type: string
+          format: uuid
+        equipmentId:
+          type: string
+          format: uuid
+          nullable: true
+        breakdownId:
+          type: string
+          format: uuid
+          nullable: true
+        maintenanceId:
+          type: string
+          format: uuid
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        lines:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items:
+            $ref: "#/components/schemas/PartRequestLineCreateRequest"
+
+    PartRequestLineQuantityRequest:
+      type: object
+      required: [lineId, quantity]
+      properties:
+        lineId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+
+    PartRequestDecisionRequest:
+      type: object
+      properties:
+        comment:
+          type: string
+          nullable: true
+
+    PartRequestQuantityActionRequest:
+      type: object
+      properties:
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartRequestLineQuantityRequest"
+
+    PartRequestLineView:
+      type: object
+      required: [id, partId, partNumber, description, unit, location, requestedQty, issuedQty, usedQty, returnedQty]
+      properties:
+        id:
+          type: string
+          format: uuid
+        partId:
+          type: string
+          format: uuid
+        partNumber:
+          type: string
+        description:
+          type: string
+        unit:
+          type: string
+        location:
+          type: string
+        requestedQty:
+          type: integer
+        issuedQty:
+          type: integer
+        usedQty:
+          type: integer
+        returnedQty:
+          type: integer
+        unitCost:
+          type: integer
+          format: int64
+          nullable: true
+        lineCost:
+          type: integer
+          format: int64
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+
+    PartRequestView:
+      type: object
+      required: [id, state, siteId, siteName, requestedBy, requestedAt, version, lines]
+      properties:
+        id:
+          type: string
+          format: uuid
+        state:
+          $ref: "#/components/schemas/PartRequestState"
+        siteId:
+          type: string
+          format: uuid
+        siteName:
+          type: string
+        equipmentId:
+          type: string
+          format: uuid
+          nullable: true
+        equipmentCode:
+          type: string
+          nullable: true
+        breakdownId:
+          type: string
+          format: uuid
+          nullable: true
+        maintenanceId:
+          type: string
+          format: uuid
+          nullable: true
+        requestedBy:
+          type: string
+        requestedAt:
+          type: string
+          format: date-time
+        approvedBy:
+          type: string
+          format: uuid
+          nullable: true
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        decisionComment:
+          type: string
+          nullable: true
+        issuedBy:
+          type: string
+          format: uuid
+          nullable: true
+        issuedAt:
+          type: string
+          format: date-time
+          nullable: true
+        usedBy:
+          type: string
+          format: uuid
+          nullable: true
+        usedAt:
+          type: string
+          format: date-time
+          nullable: true
+        returnedBy:
+          type: string
+          format: uuid
+          nullable: true
+        returnedAt:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        totalCost:
+          type: integer
+          format: int64
+          nullable: true
+          description: Only returned to callers with COST_VIEW.
+        version:
+          type: integer
+          format: int64
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/PartRequestLineView"
+
+    TechnicianView:
+      type: object
+      required: [id, eid, name, active, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        eid:
+          type: string
+        name:
+          type: string
+        function:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        siteId:
+          type: string
+          format: uuid
+          nullable: true
+        siteName:
+          type: string
+          nullable: true
+        tunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        tunnelName:
+          type: string
+          nullable: true
+        shiftId:
+          type: string
+          format: uuid
+          nullable: true
+        shiftCode:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        version:
+          type: integer
+          format: int64
+
+    TechnicianCreateRequest:
+      type: object
+      required: [eid, name]
+      properties:
+        eid:
+          type: string
+        name:
+          type: string
+        function:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        siteId:
+          type: string
+          format: uuid
+          nullable: true
+        tunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        shiftId:
+          type: string
+          format: uuid
+          nullable: true
+        active:
+          type: boolean
+          default: true
+
+    TechnicianUpdateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        function:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        siteId:
+          type: string
+          format: uuid
+          nullable: true
+        tunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        shiftId:
+          type: string
+          format: uuid
+          nullable: true
+        active:
+          type: boolean
+          default: true
+
+    OperatorView:
+      type: object
+      required: [id, employeeId, name, active, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+        name:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+          nullable: true
+        siteName:
+          type: string
+          nullable: true
+        tunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        tunnelName:
+          type: string
+          nullable: true
+        shiftId:
+          type: string
+          format: uuid
+          nullable: true
+        shiftCode:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+        version:
+          type: integer
+          format: int64
+
+    OperatorCreateRequest:
+      type: object
+      required: [employeeId, name]
+      properties:
+        employeeId:
+          type: string
+        name:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+          nullable: true
+        tunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        shiftId:
+          type: string
+          format: uuid
+          nullable: true
+        active:
+          type: boolean
+          default: true
+
+    OperatorUpdateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+          nullable: true
+        tunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        shiftId:
+          type: string
+          format: uuid
+          nullable: true
+        active:
+          type: boolean
+          default: true
+
+    AssignmentCreateRequest:
+      type: object
+      required: [personType, personId, equipmentId]
+      properties:
+        personType:
+          $ref: "#/components/schemas/PersonnelType"
+        personId:
+          type: string
+          format: uuid
+        equipmentId:
+          type: string
+          format: uuid
+        assignedFrom:
+          type: string
+          format: date-time
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+
+    AssignmentView:
+      type: object
+      required: [id, personType, personId, equipmentId, assignedFrom, assignedBy]
+      properties:
+        id:
+          type: string
+          format: uuid
+        personType:
+          $ref: "#/components/schemas/PersonnelType"
+        personId:
+          type: string
+          format: uuid
+        equipmentId:
+          type: string
+          format: uuid
+        assignedFrom:
+          type: string
+          format: date-time
+        assignedTo:
+          type: string
+          format: date-time
+          nullable: true
+        assignedBy:
+          type: string
+          format: uuid
+        reason:
+          type: string
+          nullable: true
+
+    PersonnelTransferCreateRequest:
+      type: object
+      required: [personType, personId, toSiteId, reason]
+      properties:
+        personType:
+          $ref: "#/components/schemas/PersonnelType"
+        personId:
+          type: string
+          format: uuid
+        toSiteId:
+          type: string
+          format: uuid
+        toTunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        toShiftId:
+          type: string
+          format: uuid
+          nullable: true
+        effectiveAt:
+          type: string
+          format: date-time
+          nullable: true
+        reason:
+          type: string
+
+    PersonnelTransferView:
+      type: object
+      required: [id, personType, personId, toSiteId, transferredAt, transferredBy, reason]
+      properties:
+        id:
+          type: string
+          format: uuid
+        personType:
+          $ref: "#/components/schemas/PersonnelType"
+        personId:
+          type: string
+          format: uuid
+        fromSiteId:
+          type: string
+          format: uuid
+          nullable: true
+        fromTunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        fromShiftId:
+          type: string
+          format: uuid
+          nullable: true
+        toSiteId:
+          type: string
+          format: uuid
+        toTunnelId:
+          type: string
+          format: uuid
+          nullable: true
+        toShiftId:
+          type: string
+          format: uuid
+          nullable: true
+        transferredAt:
+          type: string
+          format: date-time
+        transferredBy:
+          type: string
+          format: uuid
+        reason:
+          type: string

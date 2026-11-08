@@ -4,9 +4,12 @@ import kotlinx.serialization.Serializable
 import rw.rutongo.mmems.shared.enums.Answer
 import rw.rutongo.mmems.shared.enums.BreakdownState
 import rw.rutongo.mmems.shared.enums.MaintenanceVerificationStatus
+import rw.rutongo.mmems.shared.enums.PartRequestState
+import rw.rutongo.mmems.shared.enums.PersonnelType
 import rw.rutongo.mmems.shared.enums.Role
 import rw.rutongo.mmems.shared.enums.ServiceStatus
 import rw.rutongo.mmems.shared.enums.Severity
+import rw.rutongo.mmems.shared.enums.StockMovementType
 import rw.rutongo.mmems.shared.enums.WorkingHoursGroupBy
 
 @Serializable data class LoginRequest(
@@ -409,4 +412,246 @@ import rw.rutongo.mmems.shared.enums.WorkingHoursGroupBy
     val occurredAt: String,
     val recordedAt: String,
     val version: Long,
+)
+
+@Serializable data class PartStockViewDto(
+    val location: String,
+    val onHand: Int,
+)
+
+@Serializable data class PartViewDto(
+    val id: String,
+    val partNumber: String,
+    val description: String,
+    val category: String? = null,
+    val unit: String,
+    val minStock: Int,
+    val unitCost: Long? = null,
+    val active: Boolean,
+    val onHand: Int,
+    val lowStock: Boolean,
+    val locations: List<PartStockViewDto> = emptyList(),
+    val version: Long,
+)
+
+@Serializable data class PartCreateDto(
+    val partNumber: String,
+    val description: String,
+    val category: String? = null,
+    val unit: String = "UNIT",
+    val minStock: Int = 0,
+    val unitCost: Long? = null,
+)
+
+@Serializable data class PartUpdateDto(
+    val description: String,
+    val category: String? = null,
+    val unit: String = "UNIT",
+    val minStock: Int = 0,
+    val unitCost: Long? = null,
+    val active: Boolean = true,
+)
+
+@Serializable data class StockMovementCreateDto(
+    val partId: String,
+    val location: String = "MAIN",
+    val quantity: Int,
+    val type: StockMovementType,
+    val reason: String? = null,
+)
+
+@Serializable data class StockMovementViewDto(
+    val id: String,
+    val partId: String,
+    val partNumber: String,
+    val location: String,
+    val quantity: Int,
+    val type: StockMovementType,
+    val requestId: String? = null,
+    val userId: String,
+    val occurredAt: String,
+    val reason: String? = null,
+)
+
+@Serializable data class PartRequestLineCreateDto(
+    val partId: String,
+    val quantity: Int,
+    val location: String = "MAIN",
+    val notes: String? = null,
+)
+
+@Serializable data class PartRequestCreateDto(
+    val siteId: String,
+    val equipmentId: String? = null,
+    val breakdownId: String? = null,
+    val maintenanceId: String? = null,
+    val notes: String? = null,
+    val lines: List<PartRequestLineCreateDto>,
+)
+
+@Serializable data class PartRequestLineQuantityDto(
+    val lineId: String,
+    val quantity: Int,
+)
+
+@Serializable data class PartRequestDecisionDto(
+    val comment: String? = null,
+)
+
+@Serializable data class PartRequestQuantityActionDto(
+    val lines: List<PartRequestLineQuantityDto> = emptyList(),
+)
+
+@Serializable data class PartRequestLineViewDto(
+    val id: String,
+    val partId: String,
+    val partNumber: String,
+    val description: String,
+    val unit: String,
+    val location: String,
+    val requestedQty: Int,
+    val issuedQty: Int,
+    val usedQty: Int,
+    val returnedQty: Int,
+    val unitCost: Long? = null,
+    val lineCost: Long? = null,
+    val notes: String? = null,
+)
+
+@Serializable data class PartRequestViewDto(
+    val id: String,
+    val state: PartRequestState,
+    val siteId: String,
+    val siteName: String,
+    val equipmentId: String? = null,
+    val equipmentCode: String? = null,
+    val breakdownId: String? = null,
+    val maintenanceId: String? = null,
+    val requestedBy: String,
+    val requestedAt: String,
+    val approvedBy: String? = null,
+    val approvedAt: String? = null,
+    val decisionComment: String? = null,
+    val issuedBy: String? = null,
+    val issuedAt: String? = null,
+    val usedBy: String? = null,
+    val usedAt: String? = null,
+    val returnedBy: String? = null,
+    val returnedAt: String? = null,
+    val notes: String? = null,
+    val totalCost: Long? = null,
+    val version: Long,
+    val lines: List<PartRequestLineViewDto> = emptyList(),
+)
+
+@Serializable data class TechnicianViewDto(
+    val id: String,
+    val eid: String,
+    val name: String,
+    val function: String? = null,
+    val phone: String? = null,
+    val siteId: String? = null,
+    val siteName: String? = null,
+    val tunnelId: String? = null,
+    val tunnelName: String? = null,
+    val shiftId: String? = null,
+    val shiftCode: String? = null,
+    val active: Boolean,
+    val version: Long,
+)
+
+@Serializable data class TechnicianCreateDto(
+    val eid: String,
+    val name: String,
+    val function: String? = null,
+    val phone: String? = null,
+    val siteId: String? = null,
+    val tunnelId: String? = null,
+    val shiftId: String? = null,
+    val active: Boolean = true,
+)
+
+@Serializable data class TechnicianUpdateDto(
+    val name: String,
+    val function: String? = null,
+    val phone: String? = null,
+    val siteId: String? = null,
+    val tunnelId: String? = null,
+    val shiftId: String? = null,
+    val active: Boolean = true,
+)
+
+@Serializable data class OperatorViewDto(
+    val id: String,
+    val employeeId: String,
+    val name: String,
+    val siteId: String? = null,
+    val siteName: String? = null,
+    val tunnelId: String? = null,
+    val tunnelName: String? = null,
+    val shiftId: String? = null,
+    val shiftCode: String? = null,
+    val active: Boolean,
+    val version: Long,
+)
+
+@Serializable data class OperatorCreateDto(
+    val employeeId: String,
+    val name: String,
+    val siteId: String? = null,
+    val tunnelId: String? = null,
+    val shiftId: String? = null,
+    val active: Boolean = true,
+)
+
+@Serializable data class OperatorUpdateDto(
+    val name: String,
+    val siteId: String? = null,
+    val tunnelId: String? = null,
+    val shiftId: String? = null,
+    val active: Boolean = true,
+)
+
+@Serializable data class AssignmentCreateDto(
+    val personType: PersonnelType,
+    val personId: String,
+    val equipmentId: String,
+    val assignedFrom: String? = null,
+    val reason: String? = null,
+)
+
+@Serializable data class AssignmentViewDto(
+    val id: String,
+    val personType: PersonnelType,
+    val personId: String,
+    val equipmentId: String,
+    val assignedFrom: String,
+    val assignedTo: String? = null,
+    val assignedBy: String,
+    val reason: String? = null,
+)
+
+@Serializable data class PersonnelTransferCreateDto(
+    val personType: PersonnelType,
+    val personId: String,
+    val toSiteId: String,
+    val toTunnelId: String? = null,
+    val toShiftId: String? = null,
+    val effectiveAt: String? = null,
+    val reason: String,
+)
+
+@Serializable data class PersonnelTransferViewDto(
+    val id: String,
+    val personType: PersonnelType,
+    val personId: String,
+    val fromSiteId: String? = null,
+    val fromTunnelId: String? = null,
+    val fromShiftId: String? = null,
+    val toSiteId: String,
+    val toTunnelId: String? = null,
+    val toShiftId: String? = null,
+    val transferredAt: String,
+    val transferredBy: String,
+    val reason: String,
 )

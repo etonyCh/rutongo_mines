@@ -29,6 +29,10 @@ import rw.rutongo.mmems.modules.inspection.MarkMissingJob
 import rw.rutongo.mmems.modules.inspection.inspectionRoutes
 import rw.rutongo.mmems.modules.maintenance.MaintenanceService
 import rw.rutongo.mmems.modules.maintenance.maintenanceRoutes
+import rw.rutongo.mmems.modules.parts.PartsService
+import rw.rutongo.mmems.modules.parts.partsRoutes
+import rw.rutongo.mmems.modules.personnel.PersonnelService
+import rw.rutongo.mmems.modules.personnel.personnelRoutes
 import rw.rutongo.mmems.modules.photo.PhotoService
 import rw.rutongo.mmems.modules.photo.photoRoutes
 import rw.rutongo.mmems.modules.status.StatusService
@@ -75,6 +79,8 @@ fun Application.module() {
     val breakdowns = BreakdownService(dataSource)
     val maintenance = MaintenanceService(dataSource)
     val workingHours = WorkingHoursService(dataSource)
+    val parts = PartsService(dataSource)
+    val personnel = PersonnelService(dataSource)
     val blobStore = PrivateFileBlobStore(Path.of(System.getenv("BLOB_STORAGE_DIR") ?: "data/blobs"))
     val photos = PhotoService(dataSource, blobStore)
     val inspectionScheduler = InspectionScheduler(dataSource, GenerateExpectationsJob(dataSource), MarkMissingJob(dataSource))
@@ -120,6 +126,8 @@ fun Application.module() {
         breakdownRoutes(breakdowns, identity, signer)
         maintenanceRoutes(maintenance, identity, signer)
         workingHoursRoutes(workingHours, identity, signer)
+        partsRoutes(parts, identity, signer)
+        personnelRoutes(personnel, identity, signer)
         photoRoutes(photos, identity, signer)
     }
 }
