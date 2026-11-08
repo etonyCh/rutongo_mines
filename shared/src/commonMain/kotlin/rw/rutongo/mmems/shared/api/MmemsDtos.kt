@@ -2,6 +2,7 @@ package rw.rutongo.mmems.shared.api
 
 import kotlinx.serialization.Serializable
 import rw.rutongo.mmems.shared.enums.Answer
+import rw.rutongo.mmems.shared.enums.BreakdownState
 import rw.rutongo.mmems.shared.enums.Role
 import rw.rutongo.mmems.shared.enums.Severity
 
@@ -155,6 +156,55 @@ import rw.rutongo.mmems.shared.enums.Severity
     val shiftId: String? = null,
     val occurredAt: String,
     val overrideReason: String? = null,
+)
+
+@Serializable data class BreakdownCreateDto(
+    val equipmentId: String,
+    val category: String,
+    val problem: String,
+    val tunnelId: String? = null,
+    val shiftId: String? = null,
+    val reportedAt: String? = null,
+    val breakdownStart: String? = null,
+    val assignedTechnicianId: String? = null,
+    val actionTaken: String? = null,
+    val partsRequired: String? = null,
+    val remarks: String? = null,
+    val defectIds: List<String> = emptyList(),
+)
+
+@Serializable data class BreakdownTransitionDto(
+    val state: BreakdownState,
+    val repairStart: String? = null,
+    val repairEnd: String? = null,
+    val actionTaken: String? = null,
+    val partsRequired: String? = null,
+    val assignedTechnicianId: String? = null,
+    val remarks: String? = null,
+)
+
+@Serializable data class BreakdownViewDto(
+    val id: String,
+    val equipmentId: String,
+    val equipmentCode: String? = null,
+    val category: String,
+    val problem: String,
+    val siteId: String,
+    val tunnelId: String? = null,
+    val shiftId: String? = null,
+    val reportedBy: String,
+    val reportedAt: String,
+    val breakdownStart: String,
+    val repairStart: String? = null,
+    val repairEnd: String? = null,
+    val state: String,
+    val actionTaken: String? = null,
+    val partsRequired: String? = null,
+    val assignedTechnicianId: String? = null,
+    val remarks: String? = null,
+    val defectIds: List<String> = emptyList(),
+    val photoIds: List<String> = emptyList(),
+    val version: Long,
 )
 
 @Serializable data class PhotoDto(

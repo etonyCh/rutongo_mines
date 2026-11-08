@@ -36,6 +36,7 @@ fun HomeScreen(
     me: MeView,
     onOpenInspections: () -> Unit,
     onOpenEquipment: () -> Unit,
+    onOpenBreakdowns: () -> Unit,
 ) {
     val expected by container.store.expected().collectAsStateWithLifecycle(emptyList())
     val equipment by container.store.equipment().collectAsStateWithLifecycle(emptyList())
@@ -69,6 +70,18 @@ fun HomeScreen(
                         Text("${equipment.size} visible", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Button(onClick = onOpenEquipment, modifier = Modifier.fillMaxWidth()) { Text("OPEN EQUIPMENT") }
+                }
+            }
+        }
+        item {
+            Card(Modifier.fillMaxWidth()) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Breakdowns and repairs", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Report a breakdown offline, then move the repair through diagnosing, parts and resolution.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Button(onClick = onOpenBreakdowns, modifier = Modifier.fillMaxWidth()) { Text("OPEN BREAKDOWNS") }
                 }
             }
         }

@@ -44,6 +44,7 @@ fun StatusUpdateScreen(
     container: AppContainer,
     equipmentId: String,
     onDone: () -> Unit,
+    onReportBreakdown: () -> Unit,
 ) {
     val equipment by container.store.equipmentFlow(equipmentId).collectAsStateWithLifecycle(null)
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -81,6 +82,7 @@ fun StatusUpdateScreen(
             Text(current.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Text("${current.equipment_code} · ${current.site_name} · version ${current.version}", color = MaterialTheme.colorScheme.onSurfaceVariant)
             StatusPill(current.operational_status)
+            OutlinedButton(onClick = onReportBreakdown, modifier = Modifier.fillMaxWidth()) { Text("REPORT BREAKDOWN") }
             FieldLabel("New status")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 listOf("OPERATIONAL", "UNDER_REPAIR", "DOWN").forEach {

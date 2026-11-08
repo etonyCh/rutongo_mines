@@ -12,11 +12,11 @@
 
 package rw.rutongo.mmems.modules.breakdown
 
-import kotlinx.serialization.Serializable
 import rw.rutongo.mmems.identity.AuthFailure
 import rw.rutongo.mmems.identity.Principal
 import rw.rutongo.mmems.identity.RolePermissions
 import rw.rutongo.mmems.modules.breakdown.domain.BreakdownPolicy
+import rw.rutongo.mmems.shared.api.BreakdownViewDto
 import rw.rutongo.mmems.shared.enums.BreakdownState
 import rw.rutongo.mmems.shared.enums.Role
 import java.sql.Connection
@@ -26,29 +26,7 @@ import java.time.Instant
 import java.util.UUID
 import javax.sql.DataSource
 
-@Serializable data class BreakdownView(
-    val id: String,
-    val equipmentId: String,
-    val equipmentCode: String?,
-    val category: String,
-    val problem: String,
-    val siteId: String,
-    val tunnelId: String?,
-    val shiftId: String?,
-    val reportedBy: String,
-    val reportedAt: String,
-    val breakdownStart: String,
-    val repairStart: String?,
-    val repairEnd: String?,
-    val state: String,
-    val actionTaken: String?,
-    val partsRequired: String?,
-    val assignedTechnicianId: String?,
-    val remarks: String?,
-    val defectIds: List<String>,
-    val photoIds: List<String>,
-    val version: Long,
-)
+typealias BreakdownView = BreakdownViewDto
 
 data class BreakdownCreate(
     val idempotencyKey: String,

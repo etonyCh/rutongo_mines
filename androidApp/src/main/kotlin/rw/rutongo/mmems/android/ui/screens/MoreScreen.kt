@@ -35,6 +35,7 @@ fun MoreScreen(
     me: MeView,
     onLogout: () -> Unit,
     onReviewConflict: (String) -> Unit,
+    onReviewBreakdown: (String) -> Unit,
 ) {
     val outbox by container.store.allOutbox().collectAsStateWithLifecycle(emptyList())
     val pendingOps = outbox.count { it.state in setOf("PENDING", "RETRY", "CONFLICT") }
@@ -78,6 +79,14 @@ fun MoreScreen(
                                         onReviewConflict(operation.equipment_id)
                                     },
                                 ) { Text("RE-READ EQUIPMENT") }
+                            }
+                            if (operation.state == "CONFLICT" && operation.kind == "BREAKDOWN_TRANSITION" && operation.server_reference != null) {
+                                Button(
+                                    onClick = {
+                                        container.store.discardOutbox(operation.client_uuid)
+                                        onReviewBreakdown(operation.server_reference!!)
+                                    },
+                                ) { Text("RE-READ BREAKDOWN") }
                             }
                             OutlinedButton(onClick = { container.store.discardOutbox(operation.client_uuid) }) { Text("DISCARD") }
                         }

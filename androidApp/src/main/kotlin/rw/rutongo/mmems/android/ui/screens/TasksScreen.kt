@@ -44,7 +44,14 @@ fun TasksScreen(container: AppContainer) {
         items(pending, key = { it.client_uuid }) { op ->
             Card(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
-                    Text(if (op.kind == "STATUS") "Status update" else "Inspection submission", fontWeight = FontWeight.Bold)
+                    val label =
+                        when (op.kind) {
+                            "STATUS" -> "Status update"
+                            "BREAKDOWN_CREATE" -> "Breakdown report"
+                            "BREAKDOWN_TRANSITION" -> "Repair update"
+                            else -> "Inspection submission"
+                        }
+                    Text(label, fontWeight = FontWeight.Bold)
                     Text("${op.client_uuid} · ${op.state.lowercase()}", style = MaterialTheme.typography.bodySmall)
                 }
             }

@@ -3,6 +3,8 @@ package rw.rutongo.mmems.android.sync
 import rw.rutongo.mmems.android.data.ApiResult
 import rw.rutongo.mmems.android.data.LocalStore
 import rw.rutongo.mmems.android.data.MmemsApi
+import rw.rutongo.mmems.shared.api.BreakdownViewDto
+import rw.rutongo.mmems.shared.api.StatusEventDto
 import java.time.Instant
 
 data class SyncReport(
@@ -38,7 +40,14 @@ class SyncEngine(
             expected = expected.value,
             syncedAt = Instant.now().toString(),
         )
-        return ApiResult.Ok(Unit)
+        return when (val breakdowns = api.breakdowns()) {
+            is ApiResult.Ok -> {
+                store.cacheBreakdowns(breakdowns.value)
+                ApiResult.Ok(Unit)
+            }
+            is ApiResult.Invalid -> if (breakdowns.code == "FORBIDDEN") ApiResult.Ok(Unit) else breakdowns.failure()
+            is ApiResult.Conflict, is ApiResult.Retryable -> breakdowns.failure()
+        }
     }
 
     suspend fun syncAll(refreshReferences: Boolean = true): SyncReport {
@@ -74,21 +83,53 @@ class SyncEngine(
             }
         }
 
-        for (operation in store.pendingOutbox()) {
-            when (val result = if (operation.kind == "STATUS") api.submitStatus(operation) else api.submitInspection(operation)) {
+        for (operation in store.pendingOutbox().sortedBy { if (it.kind == "BREAKDOWN_CREATE") 0 else 1 }) {
+            val result: ApiResult<Any> =
+                when (operation.kind) {
+                    "STATUS" -> api.submitStatus(operation)
+                    "BREAKDOWN_CREATE" -> api.submitBreakdown(operation)
+                    "BREAKDOWN_TRANSITION" -> {
+                        val current = store.outbox(operation.client_uuid) ?: operation
+                        val breakdownId = current.server_reference
+                        if (breakdownId == null) {
+                            ApiResult.Invalid("BREAKDOWN_ID_MISSING", "The queued repair is missing its breakdown reference.")
+                        } else {
+                            api.submitBreakdownTransition(current, breakdownId)
+                        }
+                    }
+                    else -> api.submitInspection(operation)
+                }
+            when (result) {
                 is ApiResult.Ok -> {
-                    store.markOutboxDone(operation.client_uuid, result.rawBody)
-                    if (operation.kind == "STATUS") {
-                        val event = result.value as? rw.rutongo.mmems.shared.api.StatusEventDto
-                        if (event != null) store.updateEquipmentAfterStatus(operation.equipment_id, event.status, event.version)
+                    when (operation.kind) {
+                        "STATUS" -> {
+                            val event = result.value as? StatusEventDto
+                            store.markOutboxDone(operation.client_uuid, result.rawBody)
+                            if (event != null) store.updateEquipmentAfterStatus(operation.equipment_id, event.status, event.version)
+                        }
+                        "BREAKDOWN_CREATE" -> {
+                            val view = result.value as BreakdownViewDto
+                            store.completeBreakdownCreate(operation.client_uuid, view)
+                            store.markOutboxDone(operation.client_uuid, view.id)
+                        }
+                        "BREAKDOWN_TRANSITION" -> {
+                            val view = result.value as BreakdownViewDto
+                            store.cacheBreakdowns(listOf(view))
+                            store.markOutboxDone(operation.client_uuid, view.id)
+                        }
+                        else -> store.markOutboxDone(operation.client_uuid, result.rawBody)
                     }
                     sent++
                 }
                 is ApiResult.Invalid -> {
+                    clearBreakdownPending(operation)
+                    if (operation.kind == "BREAKDOWN_CREATE") store.deleteBreakdown(operation.client_uuid)
                     store.markOutboxRejected(operation.client_uuid, "${result.code}: ${result.message}")
                     rejected++
                 }
                 is ApiResult.Conflict -> {
+                    clearBreakdownPending(operation)
+                    if (operation.kind == "BREAKDOWN_CREATE") store.deleteBreakdown(operation.client_uuid)
                     store.markOutboxConflict(operation.client_uuid, result.currentState ?: result.message)
                     conflicts++
                 }
@@ -110,6 +151,11 @@ class SyncEngine(
             }
         }
         return SyncReport(sent, photos, rejected, conflicts, referenceFail, retry, message)
+    }
+
+    private fun clearBreakdownPending(operation: rw.rutongo.mmems.android.db.Outbox) {
+        if (operation.kind != "BREAKDOWN_TRANSITION") return
+        store.outbox(operation.client_uuid)?.server_reference?.let(store::clearBreakdownPending)
     }
 
     private fun ApiResult<*>.failure(): ApiResult<Unit> =

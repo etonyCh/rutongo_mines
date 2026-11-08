@@ -12,6 +12,8 @@ import rw.rutongo.mmems.android.db.MmemsDatabase
 import rw.rutongo.mmems.android.db.Outbox
 import rw.rutongo.mmems.android.db.Pending_photo
 import rw.rutongo.mmems.android.sync.SyncEngine
+import rw.rutongo.mmems.shared.api.BreakdownTransitionDto
+import rw.rutongo.mmems.shared.api.BreakdownViewDto
 import rw.rutongo.mmems.shared.api.ChecklistItemDto
 import rw.rutongo.mmems.shared.api.EquipmentDto
 import rw.rutongo.mmems.shared.api.ExpectedInspectionDto
@@ -22,6 +24,7 @@ import rw.rutongo.mmems.shared.api.SessionResponse
 import rw.rutongo.mmems.shared.api.ShiftDto
 import rw.rutongo.mmems.shared.api.SiteDto
 import rw.rutongo.mmems.shared.api.StatusEventDto
+import rw.rutongo.mmems.shared.enums.BreakdownState
 import rw.rutongo.mmems.shared.inspection.InspectionDraft
 import rw.rutongo.mmems.shared.inspection.WizardStep
 import java.nio.file.Files
@@ -153,10 +156,94 @@ class LocalStoreSyncTest {
             assertEquals("inspection-1", store.outbox(clientUuid)?.server_reference)
         }
 
+    @Test
+    fun `reference sync does not fail when breakdown listing is forbidden`() =
+        runTest {
+            val api = FakeApi(breakdownsResult = ApiResult.Invalid("FORBIDDEN", "Breakdowns are not available to this role."))
+
+            val result = SyncEngine(store, api).syncReferences()
+
+            assertEquals(ApiResult.Ok(Unit), result)
+        }
+
+    @Test
+    fun `offline breakdown report is replaced by the server view after sync`() =
+        runTest {
+            val localId = store.enqueueBreakdownReport(store.equipment(equipmentId)!!, "MECHANICAL", "Hydraulic leak")
+            assertEquals("CREATE", store.breakdown(localId)?.pending_state)
+            assertEquals(1, store.pendingOutbox().size)
+
+            val api = FakeApi(breakdownCreateResult = { ApiResult.Ok(breakdownView("server-breakdown-1")) })
+            val report = SyncEngine(store, api).syncAll(refreshReferences = false)
+
+            assertEquals(1, report.sentOperations)
+            assertNull(store.breakdown(localId))
+            assertEquals("server-breakdown-1", store.breakdown("server-breakdown-1")?.id)
+            assertEquals("DONE", store.outbox(localId)?.state)
+        }
+
+    @Test
+    fun `queued repair transition follows the new breakdown report and is repointed to the server id`() =
+        runTest {
+            val localId = store.enqueueBreakdownReport(store.equipment(equipmentId)!!, "MECHANICAL", "Hydraulic leak")
+            store.enqueueBreakdownTransition(
+                store.breakdown(localId)!!,
+                BreakdownTransitionDto(state = BreakdownState.DIAGNOSING, actionTaken = "Checked hoses"),
+            )
+            store.enqueueBreakdownTransition(
+                store.breakdown(localId)!!,
+                BreakdownTransitionDto(state = BreakdownState.UNDER_REPAIR, actionTaken = "Replacing hose"),
+            )
+            val transitionReferences = mutableListOf<String?>()
+            val transitionVersions = mutableListOf<Long?>()
+            var transitionCalls = 0
+
+            val api =
+                FakeApi(
+                    breakdownCreateResult = { ApiResult.Ok(breakdownView("server-breakdown-2")) },
+                    breakdownTransitionResult = { operation, breakdownId ->
+                        transitionReferences += breakdownId
+                        transitionVersions += operation.if_match
+                        transitionCalls++
+                        val state = if (transitionCalls == 1) BreakdownState.DIAGNOSING else BreakdownState.UNDER_REPAIR
+                        ApiResult.Ok(breakdownView("server-breakdown-2", state = state, version = (transitionCalls + 1).toLong()))
+                    },
+                )
+            val report = SyncEngine(store, api).syncAll(refreshReferences = false)
+
+            assertEquals(3, report.sentOperations)
+            assertEquals(listOf("server-breakdown-2", "server-breakdown-2"), transitionReferences)
+            assertEquals(listOf<Long?>(1L, 2L), transitionVersions)
+            assertEquals("UNDER_REPAIR", store.breakdown("server-breakdown-2")?.state)
+            assertEquals(3L, store.breakdown("server-breakdown-2")?.version)
+            assertNull(store.breakdown("server-breakdown-2")?.pending_state)
+        }
+
+    private fun breakdownView(
+        id: String,
+        state: BreakdownState = BreakdownState.REPORTED,
+        version: Long = 1,
+    ) = BreakdownViewDto(
+        id = id,
+        equipmentId = equipmentId,
+        equipmentCode = "EQ-01",
+        category = "MECHANICAL",
+        problem = "Hydraulic leak",
+        siteId = siteId,
+        reportedBy = "mechanic-1",
+        reportedAt = "2026-01-01T00:00:00Z",
+        breakdownStart = "2026-01-01T00:00:00Z",
+        state = state.name,
+        version = version,
+    )
+
     private class FakeApi(
         private val statusResult: (suspend (Outbox) -> ApiResult<StatusEventDto>)? = null,
         private val inspectionResult: (suspend (Outbox) -> ApiResult<InspectionDetailDto>)? = null,
         private val photoResult: (suspend (Pending_photo) -> ApiResult<PhotoDto>)? = null,
+        private val breakdownCreateResult: (suspend (Outbox) -> ApiResult<BreakdownViewDto>)? = null,
+        private val breakdownTransitionResult: (suspend (Outbox, String) -> ApiResult<BreakdownViewDto>)? = null,
+        private val breakdownsResult: ApiResult<List<BreakdownViewDto>> = ApiResult.Ok(emptyList()),
     ) : MmemsApi {
         override suspend fun login(
             username: String,
@@ -179,6 +266,15 @@ class LocalStoreSyncTest {
         override suspend fun submitInspection(operation: Outbox): ApiResult<InspectionDetailDto> = inspectionResult?.invoke(operation) ?: error("not used")
 
         override suspend fun submitStatus(operation: Outbox): ApiResult<StatusEventDto> = statusResult?.invoke(operation) ?: error("not used")
+
+        override suspend fun breakdowns(): ApiResult<List<BreakdownViewDto>> = breakdownsResult
+
+        override suspend fun submitBreakdown(operation: Outbox): ApiResult<BreakdownViewDto> = breakdownCreateResult?.invoke(operation) ?: error("not used")
+
+        override suspend fun submitBreakdownTransition(
+            operation: Outbox,
+            breakdownId: String,
+        ): ApiResult<BreakdownViewDto> = breakdownTransitionResult?.invoke(operation, breakdownId) ?: error("not used")
 
         override suspend fun uploadPhoto(
             operation: Pending_photo,

@@ -42,6 +42,11 @@ fun StatusPill(
             "UNDER_REPAIR" -> Triple("Under repair", Icons.Default.Construction, Amber)
             "DOWN" -> Triple("Down", Icons.Default.Error, Red)
             "OPERATIONAL_WITH_DEFECTS" -> Triple("Operational with defects", Icons.Default.Error, Amber)
+            "REPORTED" -> Triple("Reported", Icons.Default.HelpOutline, Amber)
+            "DIAGNOSING" -> Triple("Diagnosing", Icons.Default.Construction, Amber)
+            "AWAITING_PARTS" -> Triple("Awaiting parts", Icons.Default.Error, Amber)
+            "RESOLVED" -> Triple("Resolved", Icons.Default.CheckCircle, Green)
+            "CLOSED" -> Triple("Closed", Icons.Default.CheckCircle, MaterialTheme.colorScheme.outline)
             "NOT_RECORDED" -> Triple("Not recorded", Icons.Default.HelpOutline, MaterialTheme.colorScheme.outline)
             else -> Triple(status.lowercase().replace('_', ' '), Icons.Default.HelpOutline, MaterialTheme.colorScheme.outline)
         }

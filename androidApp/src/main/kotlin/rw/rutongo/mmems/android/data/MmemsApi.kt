@@ -29,6 +29,7 @@ import kotlinx.serialization.json.Json
 import rw.rutongo.mmems.android.db.Outbox
 import rw.rutongo.mmems.android.db.Pending_photo
 import rw.rutongo.mmems.shared.api.ApiErrorView
+import rw.rutongo.mmems.shared.api.BreakdownViewDto
 import rw.rutongo.mmems.shared.api.ChecklistItemDto
 import rw.rutongo.mmems.shared.api.EquipmentDto
 import rw.rutongo.mmems.shared.api.ExpectedInspectionDto
@@ -88,6 +89,15 @@ interface MmemsApi {
 
     suspend fun submitStatus(operation: Outbox): ApiResult<StatusEventDto>
 
+    suspend fun breakdowns(): ApiResult<List<BreakdownViewDto>>
+
+    suspend fun submitBreakdown(operation: Outbox): ApiResult<BreakdownViewDto>
+
+    suspend fun submitBreakdownTransition(
+        operation: Outbox,
+        breakdownId: String,
+    ): ApiResult<BreakdownViewDto>
+
     suspend fun uploadPhoto(
         operation: Pending_photo,
         clientUuid: String,
@@ -135,6 +145,22 @@ class KtorMmemsApi(
 
     override suspend fun submitStatus(operation: Outbox): ApiResult<StatusEventDto> =
         jwtPost("/api/v1/equipment/${operation.equipment_id}/status", operation.payload) {
+            header("Idempotency-Key", operation.client_uuid)
+            operation.if_match?.let { header(HttpHeaders.IfMatch, it.toString()) }
+        }
+
+    override suspend fun breakdowns(): ApiResult<List<BreakdownViewDto>> = jwtGet("/api/v1/breakdowns?limit=200")
+
+    override suspend fun submitBreakdown(operation: Outbox): ApiResult<BreakdownViewDto> =
+        jwtPost("/api/v1/breakdowns", operation.payload) {
+            header("Idempotency-Key", operation.client_uuid)
+        }
+
+    override suspend fun submitBreakdownTransition(
+        operation: Outbox,
+        breakdownId: String,
+    ): ApiResult<BreakdownViewDto> =
+        jwtPost("/api/v1/breakdowns/$breakdownId/transition", operation.payload) {
             header("Idempotency-Key", operation.client_uuid)
             operation.if_match?.let { header(HttpHeaders.IfMatch, it.toString()) }
         }
