@@ -88,6 +88,22 @@ class ArchitectureTest {
     }
 
     @Test
+    fun `report module depends only on identity shared and platform`() {
+        with(KoArchitectureCreator) {
+            Konsist
+                .scopeFromProduction()
+                .assertArchitecture {
+                    val shared = Layer("Shared", "rw.rutongo.mmems.shared..")
+                    val platform = Layer("Platform", "rw.rutongo.mmems.platform..")
+                    val identity = Layer("Identity", "rw.rutongo.mmems.identity..")
+                    val report = Layer("Report", "rw.rutongo.mmems.modules.report..")
+
+                    report.dependsOn(identity, shared, platform, strict = true)
+                }
+        }
+    }
+
+    @Test
     fun `maintenance and working hours domains depend only on shared`() {
         with(KoArchitectureCreator) {
             Konsist

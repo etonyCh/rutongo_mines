@@ -31,6 +31,7 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-core:0.59.0")
     implementation("org.jetbrains.exposed:exposed-jdbc:0.59.0")
     implementation("org.apache.poi:poi-ooxml:5.4.1")
+    implementation("com.github.librepdf:openpdf:2.4.0")
     implementation("com.nimbusds:nimbus-jose-jwt:10.0.2")
     implementation("de.mkammerer:argon2-jvm:2.11")
     implementation("ch.qos.logback:logback-classic:1.5.18")
@@ -40,6 +41,7 @@ dependencies {
     testImplementation("org.testcontainers:junit-jupiter:1.21.4")
     testImplementation("io.ktor:ktor-server-test-host-jvm:3.1.3")
     testImplementation("com.lemonappdev:konsist:0.18.1")
+    testImplementation("org.apache.pdfbox:pdfbox:3.0.5")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.11.4")
 }
 

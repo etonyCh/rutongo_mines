@@ -3,9 +3,12 @@ package rw.rutongo.mmems.shared.api
 import kotlinx.serialization.Serializable
 import rw.rutongo.mmems.shared.enums.Answer
 import rw.rutongo.mmems.shared.enums.BreakdownState
+import rw.rutongo.mmems.shared.enums.EquipmentCondition
 import rw.rutongo.mmems.shared.enums.MaintenanceVerificationStatus
 import rw.rutongo.mmems.shared.enums.PartRequestState
 import rw.rutongo.mmems.shared.enums.PersonnelType
+import rw.rutongo.mmems.shared.enums.ReportPeriod
+import rw.rutongo.mmems.shared.enums.ReportState
 import rw.rutongo.mmems.shared.enums.Role
 import rw.rutongo.mmems.shared.enums.ServiceStatus
 import rw.rutongo.mmems.shared.enums.Severity
@@ -654,4 +657,186 @@ import rw.rutongo.mmems.shared.enums.WorkingHoursGroupBy
     val transferredAt: String,
     val transferredBy: String,
     val reason: String,
+)
+
+@Serializable data class ReportNarrativeDto(
+    val executiveSummary: String? = null,
+    val safetyObservations: String? = null,
+    val maintenanceSummary: String? = null,
+    val partsSummary: String? = null,
+    val recommendations: String? = null,
+    val remarks: String? = null,
+)
+
+@Serializable data class ReportCreateDto(
+    val siteId: String,
+    val reportDate: String,
+    val period: ReportPeriod,
+    val narrative: ReportNarrativeDto = ReportNarrativeDto(),
+)
+
+@Serializable data class ReportNarrativeUpdateDto(
+    val narrative: ReportNarrativeDto = ReportNarrativeDto(),
+)
+
+@Serializable data class ReportActionDto(
+    val comment: String? = null,
+    val reason: String? = null,
+)
+
+@Serializable data class ReportSummaryDto(
+    val operational: Int = 0,
+    val underRepair: Int = 0,
+    val down: Int = 0,
+    val operationalWithDefects: Int = 0,
+    val notRecorded: Int = 0,
+    val totalEquipment: Int = 0,
+    val inspectionsCompleted: Int = 0,
+    val inspectionsMissing: Int = 0,
+    val breakdownsReported: Int = 0,
+    val breakdownsOpen: Int = 0,
+    val repairsCompleted: Int = 0,
+    val repairsInProgress: Int = 0,
+    val downtimeMinutes: Int = 0,
+    val maintenanceRecorded: Int = 0,
+    val maintenanceDue: Int = 0,
+    val maintenanceOverdue: Int = 0,
+    val pendingPartLines: Int = 0,
+)
+
+@Serializable data class ReportDefectDto(
+    val id: String,
+    val description: String,
+    val severity: String,
+    val state: String,
+    val reportedAt: String,
+)
+
+@Serializable data class ReportMissingInspectionDto(
+    val equipmentId: String,
+    val equipmentCode: String,
+    val shiftCode: String,
+    val windowStart: String,
+    val windowEnd: String,
+)
+
+@Serializable data class ReportBreakdownDto(
+    val id: String,
+    val equipmentId: String,
+    val equipmentCode: String,
+    val category: String,
+    val problem: String,
+    val state: String,
+    val reportedAt: String,
+    val breakdownStart: String,
+    val repairStart: String? = null,
+    val repairEnd: String? = null,
+    val actionTaken: String? = null,
+    val partsRequired: String? = null,
+    val assignedTechnicianName: String? = null,
+    val downtimeMinutes: Int? = null,
+)
+
+@Serializable data class ReportInspectionDto(
+    val id: String,
+    val equipmentId: String,
+    val equipmentCode: String,
+    val shiftCode: String,
+    val result: String,
+    val inspectorName: String? = null,
+    val inspectorEid: String,
+    val submittedAt: String,
+    val engineHoursStart: Double? = null,
+    val engineHoursEnd: Double? = null,
+)
+
+@Serializable data class ReportMaintenanceDto(
+    val id: String,
+    val equipmentId: String,
+    val equipmentCode: String,
+    val serviceTypeName: String,
+    val workPerformed: String,
+    val performedAt: String,
+    val technicianName: String? = null,
+    val verificationStatus: String,
+    val engineHours: Double? = null,
+)
+
+@Serializable data class ReportPartLineDto(
+    val requestId: String,
+    val partNumber: String,
+    val description: String,
+    val unit: String,
+    val equipmentCode: String? = null,
+    val state: String,
+    val requestedQty: Int,
+    val issuedQty: Int,
+    val usedQty: Int,
+    val returnedQty: Int,
+    val requestedAt: String,
+)
+
+@Serializable data class ReportEquipmentDto(
+    val id: String,
+    val assetId: String,
+    val equipmentCode: String,
+    val name: String,
+    val typeName: String,
+    val tunnelName: String? = null,
+    val shiftCode: String? = null,
+    val operationalStatus: String? = null,
+    val condition: EquipmentCondition,
+    val defects: List<ReportDefectDto> = emptyList(),
+    val missingInspections: List<ReportMissingInspectionDto> = emptyList(),
+    val openBreakdown: ReportBreakdownDto? = null,
+    val lastInspectionAt: String? = null,
+    val lastInspectionResult: String? = null,
+    val lastMaintenanceAt: String? = null,
+)
+
+@Serializable data class DailyReportSnapshotDto(
+    val siteId: String,
+    val siteName: String,
+    val reportDate: String,
+    val period: ReportPeriod,
+    val dataCutoffAt: String,
+    val supervisorName: String? = null,
+    val supervisorEid: String? = null,
+    val technicians: List<String> = emptyList(),
+    val summary: ReportSummaryDto = ReportSummaryDto(),
+    val equipment: List<ReportEquipmentDto> = emptyList(),
+    val inspections: List<ReportInspectionDto> = emptyList(),
+    val breakdowns: List<ReportBreakdownDto> = emptyList(),
+    val maintenance: List<ReportMaintenanceDto> = emptyList(),
+    val partsRequired: List<ReportPartLineDto> = emptyList(),
+    val outstanding: List<String> = emptyList(),
+)
+
+@Serializable data class ReportViewDto(
+    val id: String,
+    val reportRef: String,
+    val siteId: String,
+    val siteName: String,
+    val reportDate: String,
+    val period: ReportPeriod,
+    val versionId: String,
+    val versionNo: Int,
+    val state: ReportState,
+    val preparedBy: String,
+    val preparedByName: String,
+    val createdAt: String,
+    val updatedAt: String,
+    val dataCutoffAt: String,
+    val submittedAt: String? = null,
+    val approvedBy: String? = null,
+    val approvedByName: String? = null,
+    val approvedAt: String? = null,
+    val approvalComment: String? = null,
+    val returnedBy: String? = null,
+    val returnedByName: String? = null,
+    val returnedAt: String? = null,
+    val correctionReason: String? = null,
+    val pdfSha256: String? = null,
+    val narrative: ReportNarrativeDto = ReportNarrativeDto(),
+    val snapshot: DailyReportSnapshotDto,
 )

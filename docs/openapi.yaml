@@ -27,6 +27,7 @@ tags:
   - name: Photos
   - name: Parts
   - name: Personnel
+  - name: Reports
 
 paths:
   /health:
@@ -2645,6 +2646,318 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiError"
 
+  /api/v1/reports/preview:
+    get:
+      tags: [Reports]
+      summary: Preview the live daily report snapshot
+      description: Requires REPORT_PREPARE and site access. The preview is read-only and never creates a report or changes operational data.
+      parameters:
+        - name: siteId
+          in: query
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: reportDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: period
+          in: query
+          required: true
+          schema:
+            $ref: "#/components/schemas/ReportPeriod"
+      responses:
+        "200":
+          description: Live report snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyReportSnapshot"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
+  /api/v1/reports:
+    get:
+      tags: [Reports]
+      summary: List reports at their latest version
+      description: REPORT_PREPARE, REPORT_APPROVE and REPORT_VIEW_OWN_SITE see their sites. REPORT_VIEW_APPROVED-only callers see approved reports.
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: reportDate
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: state
+          in: query
+          schema:
+            $ref: "#/components/schemas/ReportState"
+        - $ref: "#/components/parameters/Limit"
+      responses:
+        "200":
+          description: Reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ReportView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Reports]
+      summary: Create a draft daily report
+      description: Requires REPORT_PREPARE and site access. The snapshot is frozen when the draft is created.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportCreateRequest"
+      responses:
+        "201":
+          description: Draft report created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: A report already exists for the site, date and period
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/reports/{id}:
+    get:
+      tags: [Reports]
+      summary: Read one report version
+      description: Without a version query parameter the latest version is returned. Approved-only callers cannot read drafts.
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+        - name: version
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /api/v1/reports/{id}/narrative:
+    put:
+      tags: [Reports]
+      summary: Update the narrative of a draft or returned report
+      description: Requires REPORT_PREPARE, the report author, and an If-Match report version.
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportNarrativeUpdateRequest"
+      responses:
+        "200":
+          description: Narrative updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict or invalid report state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/reports/{id}/pdf:
+    get:
+      tags: [Reports]
+      summary: Download the report PDF
+      description: Draft and returned versions are rendered on demand from a fresh read-only snapshot with a DRAFT watermark. Submitted and approved versions use the stored immutable PDF, whose SHA-256 fingerprint is verified before it is returned. Every successful download is audited.
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+        - name: version
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: PDF document
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          description: The stored PDF failed its SHA-256 integrity check
+
+  /api/v1/reports/{id}/submit:
+    post:
+      tags: [Reports]
+      summary: Submit or resubmit a report
+      description: Requires REPORT_PREPARE, the report author, and an If-Match report version. Submitting freezes the snapshot, narrative and PDF.
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+        - $ref: "#/components/parameters/IfMatch"
+      responses:
+        "200":
+          description: Report submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict or invalid report state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/reports/{id}/approve:
+    post:
+      tags: [Reports]
+      summary: Approve a submitted report
+      description: Requires REPORT_APPROVE, site access, an If-Match report version, and an approver different from the author.
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportActionRequest"
+      responses:
+        "200":
+          description: Report approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict, invalid state or approver is the author
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/reports/{id}/return:
+    post:
+      tags: [Reports]
+      summary: Return a submitted report for correction
+      description: Requires REPORT_APPROVE, an If-Match report version, and a non-blank reason.
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportActionRequest"
+      responses:
+        "200":
+          description: Report returned for correction
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict or invalid report state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/reports/{id}/new-version:
+    post:
+      tags: [Reports]
+      summary: Supersede an approved report with a new draft version
+      description: Requires REPORT_PREPARE, the report author, an If-Match report version, an approved report, and a non-blank reason.
+      parameters:
+        - $ref: "#/components/parameters/EntityId"
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportActionRequest"
+      responses:
+        "200":
+          description: New draft version created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReportView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict or invalid report state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -5254,3 +5567,445 @@ components:
           format: uuid
         reason:
           type: string
+
+    ReportPeriod:
+      type: string
+      enum: [DAY, RED, NIGHT, FULL_DAY]
+    ReportState:
+      type: string
+      enum: [DRAFT, SUBMITTED, RETURNED_FOR_CORRECTION, RESUBMITTED, APPROVED, SUPERSEDED]
+    EquipmentCondition:
+      type: string
+      enum: [OPERATIONAL, UNDER_REPAIR, DOWN, OPERATIONAL_WITH_DEFECTS, NOT_RECORDED]
+    ReportNarrative:
+      type: object
+      properties:
+        executiveSummary:
+          type: string
+          nullable: true
+        safetyObservations:
+          type: string
+          nullable: true
+        maintenanceSummary:
+          type: string
+          nullable: true
+        partsSummary:
+          type: string
+          nullable: true
+        recommendations:
+          type: string
+          nullable: true
+        remarks:
+          type: string
+          nullable: true
+    ReportCreateRequest:
+      type: object
+      required: [siteId, reportDate, period]
+      properties:
+        siteId:
+          type: string
+          format: uuid
+        reportDate:
+          type: string
+          format: date
+        period:
+          $ref: "#/components/schemas/ReportPeriod"
+        narrative:
+          $ref: "#/components/schemas/ReportNarrative"
+    ReportNarrativeUpdateRequest:
+      type: object
+      required: [narrative]
+      properties:
+        narrative:
+          $ref: "#/components/schemas/ReportNarrative"
+    ReportActionRequest:
+      type: object
+      properties:
+        comment:
+          type: string
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+    ReportSummary:
+      type: object
+      properties:
+        operational:
+          type: integer
+        underRepair:
+          type: integer
+        down:
+          type: integer
+        operationalWithDefects:
+          type: integer
+        notRecorded:
+          type: integer
+        totalEquipment:
+          type: integer
+        inspectionsCompleted:
+          type: integer
+        inspectionsMissing:
+          type: integer
+        breakdownsReported:
+          type: integer
+        breakdownsOpen:
+          type: integer
+        repairsCompleted:
+          type: integer
+        repairsInProgress:
+          type: integer
+        downtimeMinutes:
+          type: integer
+        maintenanceRecorded:
+          type: integer
+        maintenanceDue:
+          type: integer
+        maintenanceOverdue:
+          type: integer
+        pendingPartLines:
+          type: integer
+    ReportDefect:
+      type: object
+      required: [id, description, severity, state, reportedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        description:
+          type: string
+        severity:
+          type: string
+        state:
+          type: string
+        reportedAt:
+          type: string
+          format: date-time
+    ReportMissingInspection:
+      type: object
+      required: [equipmentId, equipmentCode, shiftCode, windowStart, windowEnd]
+      properties:
+        equipmentId:
+          type: string
+          format: uuid
+        equipmentCode:
+          type: string
+        shiftCode:
+          type: string
+        windowStart:
+          type: string
+          format: date-time
+        windowEnd:
+          type: string
+          format: date-time
+    ReportBreakdown:
+      type: object
+      required: [id, equipmentId, equipmentCode, category, problem, state, reportedAt, breakdownStart]
+      properties:
+        id:
+          type: string
+          format: uuid
+        equipmentId:
+          type: string
+          format: uuid
+        equipmentCode:
+          type: string
+        category:
+          type: string
+        problem:
+          type: string
+        state:
+          type: string
+        reportedAt:
+          type: string
+          format: date-time
+        breakdownStart:
+          type: string
+          format: date-time
+        repairStart:
+          type: string
+          format: date-time
+          nullable: true
+        repairEnd:
+          type: string
+          format: date-time
+          nullable: true
+        actionTaken:
+          type: string
+          nullable: true
+        partsRequired:
+          type: string
+          nullable: true
+        assignedTechnicianName:
+          type: string
+          nullable: true
+        downtimeMinutes:
+          type: integer
+          nullable: true
+    ReportInspection:
+      type: object
+      required: [id, equipmentId, equipmentCode, shiftCode, result, inspectorEid, submittedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        equipmentId:
+          type: string
+          format: uuid
+        equipmentCode:
+          type: string
+        shiftCode:
+          type: string
+        result:
+          type: string
+        inspectorName:
+          type: string
+          nullable: true
+        inspectorEid:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        engineHoursStart:
+          type: number
+          nullable: true
+        engineHoursEnd:
+          type: number
+          nullable: true
+    ReportMaintenance:
+      type: object
+      required: [id, equipmentId, equipmentCode, serviceTypeName, workPerformed, performedAt, verificationStatus]
+      properties:
+        id:
+          type: string
+          format: uuid
+        equipmentId:
+          type: string
+          format: uuid
+        equipmentCode:
+          type: string
+        serviceTypeName:
+          type: string
+        workPerformed:
+          type: string
+        performedAt:
+          type: string
+          format: date-time
+        technicianName:
+          type: string
+          nullable: true
+        verificationStatus:
+          type: string
+        engineHours:
+          type: number
+          nullable: true
+    ReportPartLine:
+      type: object
+      required: [requestId, partNumber, description, unit, state, requestedQty, issuedQty, usedQty, returnedQty, requestedAt]
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        partNumber:
+          type: string
+        description:
+          type: string
+        unit:
+          type: string
+        equipmentCode:
+          type: string
+          nullable: true
+        state:
+          type: string
+        requestedQty:
+          type: integer
+        issuedQty:
+          type: integer
+        usedQty:
+          type: integer
+        returnedQty:
+          type: integer
+        requestedAt:
+          type: string
+          format: date-time
+    ReportEquipment:
+      type: object
+      required: [id, assetId, equipmentCode, name, typeName, condition]
+      properties:
+        id:
+          type: string
+          format: uuid
+        assetId:
+          type: string
+        equipmentCode:
+          type: string
+        name:
+          type: string
+        typeName:
+          type: string
+        tunnelName:
+          type: string
+          nullable: true
+        shiftCode:
+          type: string
+          nullable: true
+        operationalStatus:
+          type: string
+          nullable: true
+        condition:
+          $ref: "#/components/schemas/EquipmentCondition"
+        defects:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportDefect"
+        missingInspections:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportMissingInspection"
+        openBreakdown:
+          type: object
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/ReportBreakdown"
+        lastInspectionAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastInspectionResult:
+          type: string
+          nullable: true
+        lastMaintenanceAt:
+          type: string
+          format: date-time
+          nullable: true
+    DailyReportSnapshot:
+      type: object
+      required: [siteId, siteName, reportDate, period, dataCutoffAt]
+      properties:
+        siteId:
+          type: string
+          format: uuid
+        siteName:
+          type: string
+        reportDate:
+          type: string
+          format: date
+        period:
+          $ref: "#/components/schemas/ReportPeriod"
+        dataCutoffAt:
+          type: string
+          format: date-time
+        supervisorName:
+          type: string
+          nullable: true
+        supervisorEid:
+          type: string
+          nullable: true
+        technicians:
+          type: array
+          items:
+            type: string
+        summary:
+          $ref: "#/components/schemas/ReportSummary"
+        equipment:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportEquipment"
+        inspections:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportInspection"
+        breakdowns:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportBreakdown"
+        maintenance:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportMaintenance"
+        partsRequired:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReportPartLine"
+        outstanding:
+          type: array
+          items:
+            type: string
+    ReportView:
+      type: object
+      required: [id, reportRef, siteId, siteName, reportDate, period, versionId, versionNo, state, preparedBy, preparedByName, createdAt, updatedAt, dataCutoffAt, snapshot]
+      properties:
+        id:
+          type: string
+          format: uuid
+        reportRef:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+        siteName:
+          type: string
+        reportDate:
+          type: string
+          format: date
+        period:
+          $ref: "#/components/schemas/ReportPeriod"
+        versionId:
+          type: string
+          format: uuid
+        versionNo:
+          type: integer
+        state:
+          $ref: "#/components/schemas/ReportState"
+        preparedBy:
+          type: string
+          format: uuid
+        preparedByName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        dataCutoffAt:
+          type: string
+          format: date-time
+        submittedAt:
+          type: string
+          format: date-time
+          nullable: true
+        approvedBy:
+          type: string
+          format: uuid
+          nullable: true
+        approvedByName:
+          type: string
+          nullable: true
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        approvalComment:
+          type: string
+          nullable: true
+        returnedBy:
+          type: string
+          format: uuid
+          nullable: true
+        returnedByName:
+          type: string
+          nullable: true
+        returnedAt:
+          type: string
+          format: date-time
+          nullable: true
+        correctionReason:
+          type: string
+          nullable: true
+        pdfSha256:
+          type: string
+          nullable: true
+        narrative:
+          $ref: "#/components/schemas/ReportNarrative"
+        snapshot:
+          $ref: "#/components/schemas/DailyReportSnapshot"

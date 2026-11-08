@@ -35,6 +35,10 @@ import rw.rutongo.mmems.modules.personnel.PersonnelService
 import rw.rutongo.mmems.modules.personnel.personnelRoutes
 import rw.rutongo.mmems.modules.photo.PhotoService
 import rw.rutongo.mmems.modules.photo.photoRoutes
+import rw.rutongo.mmems.modules.report.DailyReportPdfRenderer
+import rw.rutongo.mmems.modules.report.ReportService
+import rw.rutongo.mmems.modules.report.ReportSnapshotBuilder
+import rw.rutongo.mmems.modules.report.reportRoutes
 import rw.rutongo.mmems.modules.status.StatusService
 import rw.rutongo.mmems.modules.status.statusRoutes
 import rw.rutongo.mmems.modules.workinghours.WorkingHoursService
@@ -83,6 +87,7 @@ fun Application.module() {
     val personnel = PersonnelService(dataSource)
     val blobStore = PrivateFileBlobStore(Path.of(System.getenv("BLOB_STORAGE_DIR") ?: "data/blobs"))
     val photos = PhotoService(dataSource, blobStore)
+    val reports = ReportService(dataSource, blobStore, ReportSnapshotBuilder(dataSource), DailyReportPdfRenderer())
     val inspectionScheduler = InspectionScheduler(dataSource, GenerateExpectationsJob(dataSource), MarkMissingJob(dataSource))
     environment.monitor.subscribe(ApplicationStarted) { inspectionScheduler.start() }
     environment.monitor.subscribe(ApplicationStopped) {
@@ -129,6 +134,7 @@ fun Application.module() {
         partsRoutes(parts, identity, signer)
         personnelRoutes(personnel, identity, signer)
         photoRoutes(photos, identity, signer)
+        reportRoutes(reports, identity, signer)
     }
 }
 
