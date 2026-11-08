@@ -10,6 +10,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
+import io.ktor.server.routing.put
 import io.ktor.server.routing.route
 import rw.rutongo.mmems.ApiError
 import rw.rutongo.mmems.identity.AuthFailure
@@ -18,6 +19,10 @@ import rw.rutongo.mmems.identity.TokenSigner
 import rw.rutongo.mmems.identity.authenticated
 import rw.rutongo.mmems.shared.api.MaintenanceActionDto
 import rw.rutongo.mmems.shared.api.MaintenanceCreateDto
+import rw.rutongo.mmems.shared.api.ServiceIntervalCreateDto
+import rw.rutongo.mmems.shared.api.ServiceIntervalUpdateDto
+import rw.rutongo.mmems.shared.api.ServiceTypeCreateDto
+import rw.rutongo.mmems.shared.api.ServiceTypeUpdateDto
 import rw.rutongo.mmems.shared.enums.MaintenanceAction
 import rw.rutongo.mmems.shared.enums.MaintenanceVerificationStatus
 import java.time.Instant
@@ -141,6 +146,74 @@ fun Route.maintenanceRoutes(
             }
             respondFailure(call) { call.respond(service.serviceStatus(actor, id)) }
         }
+        get("/service-types") {
+            val actor = call.authenticated(identity, signer) ?: return@get
+            respondFailure(call) { call.respond(service.serviceTypes(actor)) }
+        }
+        post("/service-types") {
+            val actor = call.authenticated(identity, signer) ?: return@post
+            val request =
+                runCatching { call.receive<ServiceTypeCreateDto>() }.getOrElse {
+                    call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_SERVICE_TYPE", "The service type is invalid."))
+                    return@post
+                }
+            respondFailure(call) { call.respond(HttpStatusCode.Created, service.createServiceType(actor, request)) }
+        }
+        put("/service-types/{id}") {
+            val actor = call.authenticated(identity, signer) ?: return@put
+            val id = call.parameters["id"]?.let { parseUuid(it) }
+            if (id == null) {
+                call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_SERVICE_TYPE_ID", "The service type ID is invalid."))
+                return@put
+            }
+            val version = headerVersion(call)
+            if (version == null) {
+                call.respond(HttpStatusCode.fromValue(PRECONDITION_REQUIRED), ApiError("IF_MATCH_REQUIRED", "A valid If-Match version is required."))
+                return@put
+            }
+            val request =
+                runCatching { call.receive<ServiceTypeUpdateDto>() }.getOrElse {
+                    call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_SERVICE_TYPE", "The service type is invalid."))
+                    return@put
+                }
+            respondFailure(call) { call.respond(service.updateServiceType(actor, id, version, request)) }
+        }
+        get("/service-intervals") {
+            val actor = call.authenticated(identity, signer) ?: return@get
+            respondFailure(call) { call.respond(service.serviceIntervals(actor)) }
+        }
+        post("/service-intervals") {
+            val actor = call.authenticated(identity, signer) ?: return@post
+            val request =
+                runCatching { call.receive<ServiceIntervalCreateDto>() }.getOrElse {
+                    call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_SERVICE_INTERVAL", "The service interval is invalid."))
+                    return@post
+                }
+            respondFailure(call) { call.respond(HttpStatusCode.Created, service.createServiceInterval(actor, request)) }
+        }
+        put("/service-intervals/{id}") {
+            val actor = call.authenticated(identity, signer) ?: return@put
+            val id = call.parameters["id"]?.let { parseUuid(it) }
+            if (id == null) {
+                call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_SERVICE_INTERVAL_ID", "The service interval ID is invalid."))
+                return@put
+            }
+            val version = headerVersion(call)
+            if (version == null) {
+                call.respond(HttpStatusCode.fromValue(PRECONDITION_REQUIRED), ApiError("IF_MATCH_REQUIRED", "A valid If-Match version is required."))
+                return@put
+            }
+            val request =
+                runCatching { call.receive<ServiceIntervalUpdateDto>() }.getOrElse {
+                    call.respond(HttpStatusCode.BadRequest, ApiError("INVALID_SERVICE_INTERVAL", "The service interval is invalid."))
+                    return@put
+                }
+            respondFailure(call) { call.respond(service.updateServiceInterval(actor, id, version, request)) }
+        }
+        get("/maintenance-technicians") {
+            val actor = call.authenticated(identity, signer) ?: return@get
+            respondFailure(call) { call.respond(service.maintenanceTechnicians(actor)) }
+        }
     }
 }
 
@@ -185,6 +258,11 @@ private fun Route.maintenanceActionRoute(
 
 private fun parseUuid(value: String): UUID? = runCatching { UUID.fromString(value) }.getOrNull()
 
+private fun headerVersion(call: ApplicationCall): Long? =
+    call.request.headers["If-Match"]
+        ?.trim('"')
+        ?.toLongOrNull()
+
 private suspend fun respondFailure(
     call: ApplicationCall,
     action: suspend () -> Unit,
@@ -201,7 +279,7 @@ private suspend fun respondFailure(
 private fun statusFor(code: String): HttpStatusCode =
     when (code) {
         "FORBIDDEN", "SITE_NOT_AUTHORIZED", "IDEMPOTENCY_KEY_REPLAY_FORBIDDEN" -> HttpStatusCode.Forbidden
-        "EQUIPMENT_NOT_FOUND", "MAINTENANCE_NOT_FOUND", "SERVICE_TYPE_NOT_FOUND", "TUNNEL_NOT_IN_SITE", "TECHNICIAN_NOT_FOUND", "SUPERVISOR_NOT_FOUND", "BREAKDOWN_NOT_FOUND" -> HttpStatusCode.NotFound
-        "MAINTENANCE_VERSION_CONFLICT", "INVALID_MAINTENANCE_TRANSITION", "BREAKDOWN_EQUIPMENT_MISMATCH" -> HttpStatusCode.Conflict
+        "EQUIPMENT_NOT_FOUND", "MAINTENANCE_NOT_FOUND", "SERVICE_TYPE_NOT_FOUND", "SERVICE_INTERVAL_NOT_FOUND", "EQUIPMENT_TYPE_NOT_FOUND", "TUNNEL_NOT_IN_SITE", "TECHNICIAN_NOT_FOUND", "SUPERVISOR_NOT_FOUND", "BREAKDOWN_NOT_FOUND" -> HttpStatusCode.NotFound
+        "MAINTENANCE_VERSION_CONFLICT", "SERVICE_TYPE_VERSION_CONFLICT", "SERVICE_INTERVAL_VERSION_CONFLICT", "SERVICE_TYPE_ALREADY_EXISTS", "SERVICE_INTERVAL_ALREADY_EXISTS", "INVALID_MAINTENANCE_TRANSITION", "BREAKDOWN_EQUIPMENT_MISMATCH" -> HttpStatusCode.Conflict
         else -> HttpStatusCode.BadRequest
     }

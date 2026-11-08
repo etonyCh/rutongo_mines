@@ -202,6 +202,9 @@ SELECT * FROM breakdown WHERE equipment_id = ? AND state NOT IN ('RESOLVED', 'CL
 selectSyncState:
 SELECT value FROM sync_state WHERE key = ?;
 
+selectSyncStateValue:
+SELECT value FROM sync_state WHERE key = ?;
+
 upsertSyncState:
 INSERT OR REPLACE INTO sync_state(key, value, updated_at) VALUES (?, ?, ?);
 

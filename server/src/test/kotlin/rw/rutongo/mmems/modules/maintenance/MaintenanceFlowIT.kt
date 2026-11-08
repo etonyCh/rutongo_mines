@@ -14,6 +14,10 @@ import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import rw.rutongo.mmems.identity.AuthFailure
 import rw.rutongo.mmems.identity.Principal
+import rw.rutongo.mmems.shared.api.ServiceIntervalCreateDto
+import rw.rutongo.mmems.shared.api.ServiceIntervalUpdateDto
+import rw.rutongo.mmems.shared.api.ServiceTypeCreateDto
+import rw.rutongo.mmems.shared.api.ServiceTypeUpdateDto
 import rw.rutongo.mmems.shared.enums.MaintenanceVerificationStatus
 import rw.rutongo.mmems.shared.enums.Role
 import rw.rutongo.mmems.shared.enums.ServiceStatus
@@ -22,6 +26,8 @@ import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @Testcontainers(disabledWithoutDocker = true)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -67,6 +73,7 @@ class MaintenanceFlowIT {
         val site = createSite("MAINT")
         val mechanic = createActor(Role.MECHANIC, listOf(site))
         val supervisor = createActor(Role.SUPERVISOR, listOf(site))
+        val manager = createActor(Role.MANAGER, listOf(site))
         val equipment = createEquipment(site, 1920.0)
         val technician = createTechnician(site)
         val serviceType = createServiceType("SERVICE-250", "250-hour service")
@@ -78,7 +85,8 @@ class MaintenanceFlowIT {
 
         assertEquals(created.id, replayed.id)
         assertEquals(MaintenanceVerificationStatus.PENDING_VERIFICATION, created.verificationStatus)
-        assertEquals(5000, created.totalCost)
+        assertNull(created.totalCost)
+        assertEquals(5000, service.list(manager, site, equipment).single().totalCost)
         assertEquals(listOf("Hydraulic filter"), created.replacedComponents)
         assertEquals(1, count("select count(*) from maintenance_record where id=?", UUID.fromString(created.id)))
 
@@ -104,6 +112,53 @@ class MaintenanceFlowIT {
 
         assertEquals(2, count("select count(*) from audit_event where entity_id=?", created.id))
         assertEquals(2, count("select count(*) from outbox_message where payload->>'maintenanceId'=?", created.id))
+    }
+
+    @Test
+    fun `service catalog configuration is admin controlled and versioned`() {
+        val site = createSite("CONFIG")
+        val mechanic = createActor(Role.MECHANIC, listOf(site))
+        val admin = createActor(Role.ADMINISTRATOR, listOf(site))
+        val code = "CONFIG-${UUID.randomUUID().toString().take(8)}"
+
+        val forbidden = assertFailsWith<AuthFailure> { service.createServiceType(mechanic, ServiceTypeCreateDto(code, "Config service")) }
+        assertEquals("FORBIDDEN", forbidden.code)
+
+        val created = service.createServiceType(admin, ServiceTypeCreateDto(code, "Config service", hoursBased = true))
+        assertEquals(0, created.version)
+        assertTrue(service.serviceTypes(mechanic).any { it.id == created.id })
+
+        val stale =
+            assertFailsWith<AuthFailure> {
+                service.updateServiceType(admin, UUID.fromString(created.id), created.version + 1, ServiceTypeUpdateDto("Updated", hoursBased = false))
+            }
+        assertEquals("SERVICE_TYPE_VERSION_CONFLICT", stale.code)
+        val updated = service.updateServiceType(admin, UUID.fromString(created.id), created.version, ServiceTypeUpdateDto("Updated", hoursBased = false))
+        assertEquals(1, updated.version)
+        assertEquals("Updated", updated.name)
+        assertEquals(false, updated.hoursBased)
+
+        val equipment = createEquipment(site, 100.0)
+        val interval =
+            service.createServiceInterval(
+                admin,
+                ServiceIntervalCreateDto(created.id, equipmentId = equipment.toString(), intervalHours = 300, dueSoonThresholdHours = 40),
+            )
+        assertEquals(0, interval.version)
+
+        val updatedInterval =
+            service.updateServiceInterval(
+                admin,
+                UUID.fromString(interval.id),
+                interval.version,
+                ServiceIntervalUpdateDto(intervalHours = 350, dueSoonThresholdHours = 60),
+            )
+        assertEquals(1, updatedInterval.version)
+        assertEquals(350, updatedInterval.intervalHours)
+        assertEquals(1, service.serviceIntervals(admin).count { it.id == interval.id })
+
+        val forbiddenIntervals = assertFailsWith<AuthFailure> { service.serviceIntervals(mechanic) }
+        assertEquals("FORBIDDEN", forbiddenIntervals.code)
     }
 
     @Test

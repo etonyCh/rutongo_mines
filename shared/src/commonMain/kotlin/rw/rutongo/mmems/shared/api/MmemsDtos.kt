@@ -254,9 +254,9 @@ import rw.rutongo.mmems.shared.enums.WorkingHoursGroupBy
     val breakdownId: String? = null,
     val replacedComponents: List<String> = emptyList(),
     val downtimeMinutes: Int? = null,
-    val labourCost: Long = 0,
-    val partsCost: Long = 0,
-    val totalCost: Long = 0,
+    val labourCost: Long? = null,
+    val partsCost: Long? = null,
+    val totalCost: Long? = null,
     val currency: String,
     val verificationStatus: MaintenanceVerificationStatus,
     val verifiedBy: String? = null,
@@ -264,6 +264,63 @@ import rw.rutongo.mmems.shared.enums.WorkingHoursGroupBy
     val verificationComment: String? = null,
     val notes: String? = null,
     val version: Long,
+)
+
+@Serializable data class ServiceTypeViewDto(
+    val id: String,
+    val code: String,
+    val name: String,
+    val hoursBased: Boolean,
+    val satisfiesTypeIds: List<String> = emptyList(),
+    val version: Long,
+)
+
+@Serializable data class ServiceTypeCreateDto(
+    val code: String,
+    val name: String,
+    val hoursBased: Boolean = true,
+    val satisfiesTypeIds: List<String> = emptyList(),
+)
+
+@Serializable data class ServiceTypeUpdateDto(
+    val name: String,
+    val hoursBased: Boolean = true,
+    val satisfiesTypeIds: List<String> = emptyList(),
+)
+
+@Serializable data class ServiceIntervalViewDto(
+    val id: String,
+    val serviceTypeId: String,
+    val serviceTypeCode: String,
+    val serviceTypeName: String,
+    val equipmentTypeId: String? = null,
+    val equipmentTypeName: String? = null,
+    val equipmentId: String? = null,
+    val equipmentCode: String? = null,
+    val equipmentName: String? = null,
+    val intervalHours: Int,
+    val dueSoonThresholdHours: Int,
+    val version: Long,
+)
+
+@Serializable data class ServiceIntervalCreateDto(
+    val serviceTypeId: String,
+    val equipmentTypeId: String? = null,
+    val equipmentId: String? = null,
+    val intervalHours: Int,
+    val dueSoonThresholdHours: Int = 50,
+)
+
+@Serializable data class ServiceIntervalUpdateDto(
+    val intervalHours: Int,
+    val dueSoonThresholdHours: Int = 50,
+)
+
+@Serializable data class MaintenanceTechnicianDto(
+    val id: String,
+    val employeeId: String,
+    val name: String,
+    val siteId: String? = null,
 )
 
 @Serializable data class ServiceScheduleViewDto(

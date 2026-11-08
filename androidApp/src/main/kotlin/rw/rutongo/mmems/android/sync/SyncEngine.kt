@@ -4,6 +4,7 @@ import rw.rutongo.mmems.android.data.ApiResult
 import rw.rutongo.mmems.android.data.LocalStore
 import rw.rutongo.mmems.android.data.MmemsApi
 import rw.rutongo.mmems.shared.api.BreakdownViewDto
+import rw.rutongo.mmems.shared.api.MaintenanceViewDto
 import rw.rutongo.mmems.shared.api.StatusEventDto
 import java.time.Instant
 
@@ -40,6 +41,8 @@ class SyncEngine(
             expected = expected.value,
             syncedAt = Instant.now().toString(),
         )
+        val maintenanceData = syncMaintenance()
+        if (maintenanceData !is ApiResult.Ok) return maintenanceData
         return when (val breakdowns = api.breakdowns()) {
             is ApiResult.Ok -> {
                 store.cacheBreakdowns(breakdowns.value)
@@ -48,6 +51,29 @@ class SyncEngine(
             is ApiResult.Invalid -> if (breakdowns.code == "FORBIDDEN") ApiResult.Ok(Unit) else breakdowns.failure()
             is ApiResult.Conflict, is ApiResult.Retryable -> breakdowns.failure()
         }
+    }
+
+    suspend fun syncMaintenance(): ApiResult<Unit> {
+        val serviceTypes = api.serviceTypes()
+        if (serviceTypes !is ApiResult.Ok && !serviceTypes.isForbidden()) return serviceTypes.failure()
+        if (serviceTypes is ApiResult.Ok) store.cacheServiceTypes(serviceTypes.value)
+
+        val technicians = api.maintenanceTechnicians()
+        if (technicians !is ApiResult.Ok && !technicians.isForbidden()) return technicians.failure()
+        if (technicians is ApiResult.Ok) store.cacheTechnicians(technicians.value)
+
+        val records = api.maintenance()
+        if (records !is ApiResult.Ok && !records.isForbidden()) return records.failure()
+        if (records is ApiResult.Ok) store.cacheMaintenance(records.value)
+
+        val schedule = api.serviceSchedule()
+        if (schedule !is ApiResult.Ok && !schedule.isForbidden()) return schedule.failure()
+        if (schedule is ApiResult.Ok) store.cacheServiceSchedule(schedule.value)
+
+        val hours = api.workingHours()
+        if (hours !is ApiResult.Ok && !hours.isForbidden()) return hours.failure()
+        if (hours is ApiResult.Ok) store.cacheWorkingHours(hours.value)
+        return ApiResult.Ok(Unit)
     }
 
     suspend fun syncAll(refreshReferences: Boolean = true): SyncReport {
@@ -97,6 +123,7 @@ class SyncEngine(
                             api.submitBreakdownTransition(current, breakdownId)
                         }
                     }
+                    "MAINTENANCE_CREATE" -> api.submitMaintenance(operation)
                     else -> api.submitInspection(operation)
                 }
             when (result) {
@@ -115,6 +142,11 @@ class SyncEngine(
                         "BREAKDOWN_TRANSITION" -> {
                             val view = result.value as BreakdownViewDto
                             store.cacheBreakdowns(listOf(view))
+                            store.markOutboxDone(operation.client_uuid, view.id)
+                        }
+                        "MAINTENANCE_CREATE" -> {
+                            val view = result.value as MaintenanceViewDto
+                            store.upsertMaintenance(view)
                             store.markOutboxDone(operation.client_uuid, view.id)
                         }
                         else -> store.markOutboxDone(operation.client_uuid, result.rawBody)
@@ -157,6 +189,8 @@ class SyncEngine(
         if (operation.kind != "BREAKDOWN_TRANSITION") return
         store.outbox(operation.client_uuid)?.server_reference?.let(store::clearBreakdownPending)
     }
+
+    private fun ApiResult<*>.isForbidden() = this is ApiResult.Invalid && code == "FORBIDDEN"
 
     private fun ApiResult<*>.failure(): ApiResult<Unit> =
         when (this) {

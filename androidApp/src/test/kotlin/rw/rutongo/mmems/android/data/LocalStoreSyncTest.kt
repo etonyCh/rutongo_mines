@@ -18,13 +18,21 @@ import rw.rutongo.mmems.shared.api.ChecklistItemDto
 import rw.rutongo.mmems.shared.api.EquipmentDto
 import rw.rutongo.mmems.shared.api.ExpectedInspectionDto
 import rw.rutongo.mmems.shared.api.InspectionDetailDto
+import rw.rutongo.mmems.shared.api.MaintenanceCreateDto
+import rw.rutongo.mmems.shared.api.MaintenanceTechnicianDto
+import rw.rutongo.mmems.shared.api.MaintenanceViewDto
 import rw.rutongo.mmems.shared.api.MeView
 import rw.rutongo.mmems.shared.api.PhotoDto
+import rw.rutongo.mmems.shared.api.ServiceScheduleViewDto
+import rw.rutongo.mmems.shared.api.ServiceTypeViewDto
 import rw.rutongo.mmems.shared.api.SessionResponse
 import rw.rutongo.mmems.shared.api.ShiftDto
 import rw.rutongo.mmems.shared.api.SiteDto
 import rw.rutongo.mmems.shared.api.StatusEventDto
+import rw.rutongo.mmems.shared.api.WorkingHoursResponseDto
 import rw.rutongo.mmems.shared.enums.BreakdownState
+import rw.rutongo.mmems.shared.enums.MaintenanceVerificationStatus
+import rw.rutongo.mmems.shared.enums.WorkingHoursGroupBy
 import rw.rutongo.mmems.shared.inspection.InspectionDraft
 import rw.rutongo.mmems.shared.inspection.WizardStep
 import java.nio.file.Files
@@ -157,6 +165,53 @@ class LocalStoreSyncTest {
         }
 
     @Test
+    fun `offline maintenance is queued and cached from the server response`() =
+        runTest {
+            val input =
+                MaintenanceCreateDto(
+                    equipmentId = equipmentId,
+                    serviceTypeId = "service-1",
+                    workPerformed = "Replaced hydraulic filter",
+                    technicianId = "technician-1",
+                )
+            val clientUuid = store.enqueueMaintenance(equipmentId, input)
+            assertEquals(1, store.pendingOutbox().size)
+
+            val api =
+                FakeApi(
+                    maintenanceCreateResult = {
+                        ApiResult.Ok(
+                            MaintenanceViewDto(
+                                id = "maintenance-1",
+                                equipmentId = equipmentId,
+                                equipmentCode = "EQ-01",
+                                equipmentName = "LHD 01",
+                                serviceTypeId = "service-1",
+                                serviceTypeCode = "SERVICE-250",
+                                serviceTypeName = "250-hour service",
+                                siteId = siteId,
+                                siteName = "Kigali site",
+                                performedAt = "2026-01-01T00:00:00Z",
+                                workPerformed = "Replaced hydraulic filter",
+                                technicianId = "technician-1",
+                                technicianName = "Technician",
+                                totalCost = null,
+                                currency = "RWF",
+                                verificationStatus = MaintenanceVerificationStatus.PENDING_VERIFICATION,
+                                version = 0,
+                            ),
+                        )
+                    },
+                )
+            val report = SyncEngine(store, api).syncAll(refreshReferences = false)
+
+            assertEquals(1, report.sentOperations)
+            assertEquals("DONE", store.outbox(clientUuid)?.state)
+            assertEquals("maintenance-1", store.maintenanceNow().single().id)
+            assertNull(store.maintenanceNow().single().totalCost)
+        }
+
+    @Test
     fun `reference sync does not fail when breakdown listing is forbidden`() =
         runTest {
             val api = FakeApi(breakdownsResult = ApiResult.Invalid("FORBIDDEN", "Breakdowns are not available to this role."))
@@ -244,6 +299,7 @@ class LocalStoreSyncTest {
         private val breakdownCreateResult: (suspend (Outbox) -> ApiResult<BreakdownViewDto>)? = null,
         private val breakdownTransitionResult: (suspend (Outbox, String) -> ApiResult<BreakdownViewDto>)? = null,
         private val breakdownsResult: ApiResult<List<BreakdownViewDto>> = ApiResult.Ok(emptyList()),
+        private val maintenanceCreateResult: (suspend (Outbox) -> ApiResult<MaintenanceViewDto>)? = null,
     ) : MmemsApi {
         override suspend fun login(
             username: String,
@@ -283,5 +339,24 @@ class LocalStoreSyncTest {
             val result = photoResult?.invoke(operation) ?: error("not used")
             return if (result is ApiResult.Ok) ApiResult.Ok(result.value, result.rawBody) else result
         }
+
+        override suspend fun serviceTypes(): ApiResult<List<ServiceTypeViewDto>> = ApiResult.Ok(emptyList())
+
+        override suspend fun maintenanceTechnicians(): ApiResult<List<MaintenanceTechnicianDto>> = ApiResult.Ok(emptyList())
+
+        override suspend fun maintenance(): ApiResult<List<MaintenanceViewDto>> = ApiResult.Ok(emptyList())
+
+        override suspend fun serviceSchedule(): ApiResult<List<ServiceScheduleViewDto>> = ApiResult.Ok(emptyList())
+
+        override suspend fun workingHours(): ApiResult<WorkingHoursResponseDto> = ApiResult.Ok(WorkingHoursResponseDto(WorkingHoursGroupBy.EQUIPMENT, emptyList(), emptyList(), 0.0))
+
+        override suspend fun submitMaintenance(operation: Outbox): ApiResult<MaintenanceViewDto> = maintenanceCreateResult?.invoke(operation) ?: error("not used")
+
+        override suspend fun transitionMaintenance(
+            maintenanceId: String,
+            action: String,
+            version: Long,
+            comment: String?,
+        ): ApiResult<MaintenanceViewDto> = error("not used")
     }
 }

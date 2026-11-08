@@ -35,13 +35,19 @@ import rw.rutongo.mmems.shared.api.EquipmentDto
 import rw.rutongo.mmems.shared.api.ExpectedInspectionDto
 import rw.rutongo.mmems.shared.api.InspectionDetailDto
 import rw.rutongo.mmems.shared.api.LoginRequest
+import rw.rutongo.mmems.shared.api.MaintenanceActionDto
+import rw.rutongo.mmems.shared.api.MaintenanceTechnicianDto
+import rw.rutongo.mmems.shared.api.MaintenanceViewDto
 import rw.rutongo.mmems.shared.api.MeView
 import rw.rutongo.mmems.shared.api.PhotoDto
 import rw.rutongo.mmems.shared.api.RefreshRequest
+import rw.rutongo.mmems.shared.api.ServiceScheduleViewDto
+import rw.rutongo.mmems.shared.api.ServiceTypeViewDto
 import rw.rutongo.mmems.shared.api.SessionResponse
 import rw.rutongo.mmems.shared.api.ShiftDto
 import rw.rutongo.mmems.shared.api.SiteDto
 import rw.rutongo.mmems.shared.api.StatusEventDto
+import rw.rutongo.mmems.shared.api.WorkingHoursResponseDto
 import java.io.File
 
 sealed interface ApiResult<out T> {
@@ -102,6 +108,25 @@ interface MmemsApi {
         operation: Pending_photo,
         clientUuid: String,
     ): ApiResult<PhotoDto>
+
+    suspend fun serviceTypes(): ApiResult<List<ServiceTypeViewDto>>
+
+    suspend fun maintenanceTechnicians(): ApiResult<List<MaintenanceTechnicianDto>>
+
+    suspend fun maintenance(): ApiResult<List<MaintenanceViewDto>>
+
+    suspend fun serviceSchedule(): ApiResult<List<ServiceScheduleViewDto>>
+
+    suspend fun workingHours(): ApiResult<WorkingHoursResponseDto>
+
+    suspend fun submitMaintenance(operation: Outbox): ApiResult<MaintenanceViewDto>
+
+    suspend fun transitionMaintenance(
+        maintenanceId: String,
+        action: String,
+        version: Long,
+        comment: String?,
+    ): ApiResult<MaintenanceViewDto>
 }
 
 class KtorMmemsApi(
@@ -164,6 +189,37 @@ class KtorMmemsApi(
             header("Idempotency-Key", operation.client_uuid)
             operation.if_match?.let { header(HttpHeaders.IfMatch, it.toString()) }
         }
+
+    override suspend fun serviceTypes(): ApiResult<List<ServiceTypeViewDto>> = jwtGet("/api/v1/service-types")
+
+    override suspend fun maintenanceTechnicians(): ApiResult<List<MaintenanceTechnicianDto>> = jwtGet("/api/v1/maintenance-technicians")
+
+    override suspend fun maintenance(): ApiResult<List<MaintenanceViewDto>> = jwtGet("/api/v1/maintenance?limit=100")
+
+    override suspend fun serviceSchedule(): ApiResult<List<ServiceScheduleViewDto>> = jwtGet("/api/v1/service-schedule")
+
+    override suspend fun workingHours(): ApiResult<WorkingHoursResponseDto> = jwtGet("/api/v1/working-hours?groupBy=EQUIPMENT")
+
+    override suspend fun submitMaintenance(operation: Outbox): ApiResult<MaintenanceViewDto> =
+        jwtPost("/api/v1/maintenance", operation.payload) {
+            header("Idempotency-Key", operation.client_uuid)
+        }
+
+    override suspend fun transitionMaintenance(
+        maintenanceId: String,
+        action: String,
+        version: Long,
+        comment: String?,
+    ): ApiResult<MaintenanceViewDto> {
+        val path =
+            when (action) {
+                "VERIFY" -> "/api/v1/maintenance/$maintenanceId/verify"
+                "REJECT" -> "/api/v1/maintenance/$maintenanceId/reject"
+                else -> "/api/v1/maintenance/$maintenanceId/request-correction"
+            }
+        val payload = LocalStore.json.encodeToString(MaintenanceActionDto.serializer(), MaintenanceActionDto(comment))
+        return jwtPost(path, payload) { header(HttpHeaders.IfMatch, version.toString()) }
+    }
 
     override suspend fun uploadPhoto(
         operation: Pending_photo,

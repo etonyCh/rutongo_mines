@@ -7,6 +7,8 @@ import app.cash.sqldelight.db.SqlDriver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import rw.rutongo.mmems.android.db.Breakdown
 import rw.rutongo.mmems.android.db.Checklist_item
@@ -23,9 +25,15 @@ import rw.rutongo.mmems.shared.api.BreakdownViewDto
 import rw.rutongo.mmems.shared.api.ChecklistItemDto
 import rw.rutongo.mmems.shared.api.EquipmentDto
 import rw.rutongo.mmems.shared.api.ExpectedInspectionDto
+import rw.rutongo.mmems.shared.api.MaintenanceCreateDto
+import rw.rutongo.mmems.shared.api.MaintenanceTechnicianDto
+import rw.rutongo.mmems.shared.api.MaintenanceViewDto
 import rw.rutongo.mmems.shared.api.MeView
+import rw.rutongo.mmems.shared.api.ServiceScheduleViewDto
+import rw.rutongo.mmems.shared.api.ServiceTypeViewDto
 import rw.rutongo.mmems.shared.api.ShiftDto
 import rw.rutongo.mmems.shared.api.SiteDto
+import rw.rutongo.mmems.shared.api.WorkingHoursResponseDto
 import rw.rutongo.mmems.shared.enums.BreakdownState
 import rw.rutongo.mmems.shared.inspection.InspectionDraft
 import java.time.Instant
@@ -367,6 +375,76 @@ class LocalStore(
         }
     }
 
+    fun serviceTypesNow(): List<ServiceTypeViewDto> = cachedList(SERVICE_TYPES)
+
+    fun serviceTypes(): Flow<List<ServiceTypeViewDto>> = cachedListFlow(SERVICE_TYPES)
+
+    fun cacheServiceTypes(items: List<ServiceTypeViewDto>) = saveCache(SERVICE_TYPES, items)
+
+    fun maintenanceNow(): List<MaintenanceViewDto> = cachedList(MAINTENANCE)
+
+    fun maintenance(): Flow<List<MaintenanceViewDto>> = cachedListFlow(MAINTENANCE)
+
+    fun cacheMaintenance(items: List<MaintenanceViewDto>) = saveCache(MAINTENANCE, items)
+
+    fun upsertMaintenance(view: MaintenanceViewDto) {
+        cacheMaintenance(maintenanceNow().filterNot { it.id == view.id } + view)
+    }
+
+    fun techniciansNow(): List<MaintenanceTechnicianDto> = cachedList(TECHNICIANS)
+
+    fun technicians(): Flow<List<MaintenanceTechnicianDto>> = cachedListFlow(TECHNICIANS)
+
+    fun cacheTechnicians(items: List<MaintenanceTechnicianDto>) = saveCache(TECHNICIANS, items)
+
+    fun serviceSchedule(): Flow<List<ServiceScheduleViewDto>> = cachedListFlow(SERVICE_SCHEDULE)
+
+    fun cacheServiceSchedule(items: List<ServiceScheduleViewDto>) = saveCache(SERVICE_SCHEDULE, items)
+
+    fun workingHours(): Flow<WorkingHoursResponseDto?> =
+        queries
+            .selectSyncStateValue(WORKING_HOURS)
+            .asFlow()
+            .mapToOneOrNull(Dispatchers.IO)
+            .map { it?.let { value -> runCatching { json.decodeFromString(WorkingHoursResponseDto.serializer(), value) }.getOrNull() } }
+
+    fun cacheWorkingHours(value: WorkingHoursResponseDto) = saveCache(WORKING_HOURS, value)
+
+    fun enqueueMaintenance(
+        equipmentId: String,
+        input: MaintenanceCreateDto,
+    ): String {
+        val clientUuid = UUID.randomUUID().toString()
+        enqueueOutbox(
+            clientUuid = clientUuid,
+            kind = "MAINTENANCE_CREATE",
+            equipmentId = equipmentId,
+            payload = json.encodeToString(MaintenanceCreateDto.serializer(), input),
+        )
+        return clientUuid
+    }
+
+    private inline fun <reified T> saveCache(
+        key: String,
+        value: T,
+    ) {
+        queries.upsertSyncState(key, json.encodeToString(value), Instant.now().toString())
+    }
+
+    private inline fun <reified T> cachedList(key: String): List<T> =
+        queries.selectSyncStateValue(key).executeAsOneOrNull()?.let { value ->
+            runCatching { json.decodeFromString<List<T>>(value) }.getOrNull()
+        } ?: emptyList()
+
+    private inline fun <reified T> cachedListFlow(key: String): Flow<List<T>> =
+        queries
+            .selectSyncStateValue(key)
+            .asFlow()
+            .mapToOneOrNull(Dispatchers.IO)
+            .map { value ->
+                value?.let { runCatching { json.decodeFromString<List<T>>(it) }.getOrNull() } ?: emptyList()
+            }
+
     fun equipmentFlow(id: String): Flow<Equipment?> = queries.selectEquipmentById(id).asFlow().mapToOneOrNull(Dispatchers.IO)
 
     fun equipmentBySite(siteId: String): Flow<List<Equipment>> =
@@ -523,6 +601,12 @@ class LocalStore(
     }
 
     companion object {
+        private const val SERVICE_TYPES = "service_types"
+        private const val MAINTENANCE = "maintenance"
+        private const val TECHNICIANS = "maintenance_technicians"
+        private const val SERVICE_SCHEDULE = "service_schedule"
+        private const val WORKING_HOURS = "working_hours"
+
         val json =
             Json {
                 ignoreUnknownKeys = true

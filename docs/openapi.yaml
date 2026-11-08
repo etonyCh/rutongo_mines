@@ -1711,6 +1711,188 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /api/v1/service-types:
+    get:
+      tags: [Maintenance]
+      summary: List service types
+      description: Available to maintenance staff and administrators.
+      responses:
+        "200":
+          description: Service types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServiceTypeView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Maintenance]
+      summary: Create a service type
+      description: Requires CONFIG_MANAGE.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceTypeCreateRequest"
+      responses:
+        "201":
+          description: Service type created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceTypeView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: A service type with this code already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/service-types/{id}:
+    put:
+      tags: [Maintenance]
+      summary: Update a service type
+      description: Requires CONFIG_MANAGE and an If-Match version.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceTypeUpdateRequest"
+      responses:
+        "200":
+          description: Service type updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceTypeView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/service-intervals:
+    get:
+      tags: [Maintenance]
+      summary: List service intervals
+      description: Requires CONFIG_MANAGE.
+      responses:
+        "200":
+          description: Service intervals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServiceIntervalView"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+    post:
+      tags: [Maintenance]
+      summary: Create a service interval
+      description: Requires CONFIG_MANAGE. Set equipmentId or equipmentTypeId, or neither for a global interval.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceIntervalCreateRequest"
+      responses:
+        "201":
+          description: Service interval created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceIntervalView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Duplicate interval
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/service-intervals/{id}:
+    put:
+      tags: [Maintenance]
+      summary: Update a service interval
+      description: Requires CONFIG_MANAGE and an If-Match version.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - $ref: "#/components/parameters/IfMatch"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceIntervalUpdateRequest"
+      responses:
+        "200":
+          description: Service interval updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceIntervalView"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Version conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+
+  /api/v1/maintenance-technicians:
+    get:
+      tags: [Maintenance]
+      summary: List technicians selectable for maintenance
+      responses:
+        "200":
+          description: Active technicians visible to the caller
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MaintenanceTechnician"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+
   /api/v1/working-hours:
     get:
       tags: [WorkingHours]
@@ -3376,12 +3558,18 @@ components:
         labourCost:
           type: integer
           format: int64
+          nullable: true
+          description: Null unless the caller has COST_VIEW.
         partsCost:
           type: integer
           format: int64
+          nullable: true
+          description: Null unless the caller has COST_VIEW.
         totalCost:
           type: integer
           format: int64
+          nullable: true
+          description: Null unless the caller has COST_VIEW.
         currency:
           type: string
         verificationStatus:
@@ -3403,6 +3591,154 @@ components:
         version:
           type: integer
           format: int64
+
+    ServiceTypeView:
+      type: object
+      required: [id, code, name, hoursBased, satisfiesTypeIds, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        hoursBased:
+          type: boolean
+        satisfiesTypeIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        version:
+          type: integer
+          format: int64
+
+    ServiceTypeCreateRequest:
+      type: object
+      required: [code, name]
+      properties:
+        code:
+          type: string
+          maxLength: 40
+        name:
+          type: string
+          maxLength: 200
+        hoursBased:
+          type: boolean
+          default: true
+        satisfiesTypeIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    ServiceTypeUpdateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 200
+        hoursBased:
+          type: boolean
+          default: true
+        satisfiesTypeIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    ServiceIntervalView:
+      type: object
+      required:
+        [id, serviceTypeId, serviceTypeCode, serviceTypeName, intervalHours, dueSoonThresholdHours, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        serviceTypeId:
+          type: string
+          format: uuid
+        serviceTypeCode:
+          type: string
+        serviceTypeName:
+          type: string
+        equipmentTypeId:
+          type: string
+          format: uuid
+          nullable: true
+        equipmentTypeName:
+          type: string
+          nullable: true
+        equipmentId:
+          type: string
+          format: uuid
+          nullable: true
+        equipmentCode:
+          type: string
+          nullable: true
+        equipmentName:
+          type: string
+          nullable: true
+        intervalHours:
+          type: integer
+        dueSoonThresholdHours:
+          type: integer
+        version:
+          type: integer
+          format: int64
+
+    ServiceIntervalCreateRequest:
+      type: object
+      required: [serviceTypeId, intervalHours]
+      properties:
+        serviceTypeId:
+          type: string
+          format: uuid
+        equipmentTypeId:
+          type: string
+          format: uuid
+          nullable: true
+        equipmentId:
+          type: string
+          format: uuid
+          nullable: true
+        intervalHours:
+          type: integer
+          minimum: 1
+        dueSoonThresholdHours:
+          type: integer
+          minimum: 0
+          default: 50
+
+    ServiceIntervalUpdateRequest:
+      type: object
+      required: [intervalHours]
+      properties:
+        intervalHours:
+          type: integer
+          minimum: 1
+        dueSoonThresholdHours:
+          type: integer
+          minimum: 0
+          default: 50
+
+    MaintenanceTechnician:
+      type: object
+      required: [id, employeeId, name]
+      properties:
+        id:
+          type: string
+          format: uuid
+        employeeId:
+          type: string
+        name:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+          nullable: true
 
     ServiceStatus:
       type: string
