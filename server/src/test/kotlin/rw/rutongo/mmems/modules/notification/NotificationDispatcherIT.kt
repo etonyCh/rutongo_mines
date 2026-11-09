@@ -13,6 +13,7 @@ import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
 import rw.rutongo.mmems.identity.Principal
+import rw.rutongo.mmems.shared.api.NotificationRuleUpdateDto
 import rw.rutongo.mmems.shared.api.PushDeviceRegistrationDto
 import rw.rutongo.mmems.shared.enums.PushPlatform
 import rw.rutongo.mmems.shared.enums.Role
@@ -132,6 +133,36 @@ class NotificationDispatcherIT {
         val events = service.eventsAfter(supervisor, cursor, UUID(0, 0))
         assertTrue(events.size == 1)
         assertEquals(expectation.toString(), events.single().payload["expectationId"])
+    }
+
+    @Test
+    fun `disabled notification rule suppresses in-app notifications`() {
+        val site = createSite()
+        val admin = createActor(Role.ADMINISTRATOR, site)
+        val supervisor = createActor(Role.SUPERVISOR, site)
+        val service = NotificationService(dataSource) { now }
+        val dispatcher = NotificationDispatcher(dataSource, RecordingNotifier { sent++ }) { now }
+        val rule = service.rules(admin).single { it.type.name == "INSPECTION_MISSING" }
+        try {
+            service.updateRule(
+                admin,
+                rule.type,
+                NotificationRuleUpdateDto(rule.roles, rule.siteScoped, rule.channel, false),
+            )
+            val expectation = UUID.randomUUID()
+            outbox("INSPECTION_MISSING", """{"expectationId":"$expectation","siteId":"$site","dedupeKey":"disabled:$expectation"}""")
+
+            val result = dispatcher.dispatchOnce()
+
+            assertEquals(0, result.notifications)
+            assertEquals(0, service.list(supervisor).items.size)
+        } finally {
+            service.updateRule(
+                admin,
+                rule.type,
+                NotificationRuleUpdateDto(rule.roles, rule.siteScoped, rule.channel, true),
+            )
+        }
     }
 
     private fun createSite(): UUID {

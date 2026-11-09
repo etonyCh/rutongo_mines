@@ -21,6 +21,7 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json-jvm:3.1.3")
     implementation("io.ktor:ktor-server-status-pages-jvm:3.1.3")
     implementation("io.ktor:ktor-server-rate-limit-jvm:3.1.3")
+    implementation("io.ktor:ktor-server-cors-jvm:3.1.3")
     implementation("io.insert-koin:koin-ktor:4.0.2")
     implementation("io.insert-koin:koin-logger-slf4j:4.0.2")
     implementation("org.flywaydb:flyway-core:11.3.4")

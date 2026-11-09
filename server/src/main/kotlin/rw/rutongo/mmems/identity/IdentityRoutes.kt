@@ -219,14 +219,16 @@ internal suspend fun ApplicationCall.authenticated(
     return principal
 }
 
+private fun secureCookies(): Boolean = System.getenv("COOKIE_SECURE")?.toBooleanStrictOrNull() ?: true
+
 private fun setRefreshCookie(
     call: ApplicationCall,
     token: String,
     seconds: Int,
 ) {
-    call.response.cookies.append("refresh_token", token, maxAge = seconds.toLong(), httpOnly = true, secure = true, path = "/api/v1/auth", extensions = mapOf("SameSite" to "Strict"))
+    call.response.cookies.append("refresh_token", token, maxAge = seconds.toLong(), httpOnly = true, secure = secureCookies(), path = "/api/v1/auth", extensions = mapOf("SameSite" to "Strict"))
 }
 
 private fun clearRefreshCookie(call: ApplicationCall) {
-    call.response.cookies.append("refresh_token", "", maxAge = 0L, httpOnly = true, secure = true, path = "/api/v1/auth", extensions = mapOf("SameSite" to "Strict"))
+    call.response.cookies.append("refresh_token", "", maxAge = 0L, httpOnly = true, secure = secureCookies(), path = "/api/v1/auth", extensions = mapOf("SameSite" to "Strict"))
 }

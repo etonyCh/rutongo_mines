@@ -7,6 +7,7 @@ import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.*
 import io.ktor.server.plugins.contentnegotiation.*
+import io.ktor.server.plugins.cors.routing.CORS
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -38,6 +39,7 @@ import rw.rutongo.mmems.modules.notification.NotificationDispatcher
 import rw.rutongo.mmems.modules.notification.NotificationScheduler
 import rw.rutongo.mmems.modules.notification.NotificationService
 import rw.rutongo.mmems.modules.notification.notificationRoutes
+import rw.rutongo.mmems.modules.operations.OperationsScheduler
 import rw.rutongo.mmems.modules.parts.PartsService
 import rw.rutongo.mmems.modules.parts.partsRoutes
 import rw.rutongo.mmems.modules.personnel.PersonnelService
@@ -102,14 +104,17 @@ fun Application.module() {
     val notifications = NotificationService(dataSource)
     val notificationDispatcher = NotificationDispatcher(dataSource, FcmPushNotifier())
     val notificationScheduler = NotificationScheduler(dataSource, notificationDispatcher)
+    val operationsScheduler = OperationsScheduler(dataSource)
     val inspectionScheduler = InspectionScheduler(dataSource, GenerateExpectationsJob(dataSource), MarkMissingJob(dataSource))
     environment.monitor.subscribe(ApplicationStarted) {
         inspectionScheduler.start()
         notificationScheduler.start()
+        operationsScheduler.start()
     }
     environment.monitor.subscribe(ApplicationStopped) {
         inspectionScheduler.stop()
         notificationScheduler.stop()
+        operationsScheduler.stop()
         dataSource.close()
     }
     install(Koin) {
@@ -131,6 +136,23 @@ fun Application.module() {
         )
     }
     install(ContentNegotiation) { json() }
+    install(CORS) {
+        allowMethod(HttpMethod.Get)
+        allowMethod(HttpMethod.Post)
+        allowMethod(HttpMethod.Put)
+        allowMethod(HttpMethod.Patch)
+        allowMethod(HttpMethod.Delete)
+        allowHeader(HttpHeaders.Authorization)
+        allowHeader(HttpHeaders.ContentType)
+        allowHeader(HttpHeaders.IfMatch)
+        allowHeader("Last-Event-ID")
+        allowHeader("Idempotency-Key")
+        allowHeader("X-CSRF-Token")
+        allowHeader("X-Requested-With")
+        allowCredentials = true
+        val origins = (System.getenv("WEB_ORIGINS") ?: "http://localhost:8081,http://127.0.0.1:8081").split(',').map(String::trim).filter(String::isNotBlank)
+        allowOrigins { origin -> origin in origins }
+    }
     install(StatusPages) {
         exception<Throwable> { call, cause ->
             if (cause is BadRequestException) {

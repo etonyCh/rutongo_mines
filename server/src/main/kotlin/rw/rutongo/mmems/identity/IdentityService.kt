@@ -7,6 +7,7 @@ import com.nimbusds.jose.crypto.RSASSAVerifier
 import com.nimbusds.jwt.JWTClaimsSet
 import com.nimbusds.jwt.SignedJWT
 import de.mkammerer.argon2.Argon2Factory
+import kotlinx.serialization.Serializable
 import rw.rutongo.mmems.shared.enums.Role
 import java.security.KeyFactory
 import java.security.KeyPair
@@ -37,7 +38,7 @@ data class SessionTokens(
     val mustChangePassword: Boolean,
 )
 
-data class UserView(
+@Serializable data class UserView(
     val id: String,
     val username: String,
     val fullName: String,

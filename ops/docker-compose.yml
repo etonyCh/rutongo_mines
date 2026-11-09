@@ -23,6 +23,11 @@ services:
       DATABASE_URL: jdbc:postgresql://db:5432/mmems
       DATABASE_USER: mmems
       DATABASE_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-only}
+      WEB_ORIGINS: ${WEB_ORIGINS:-http://localhost:8081,http://127.0.0.1:8081}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      FCM_CREDENTIALS: ${FCM_CREDENTIALS:-}
+      BACKUP_VERIFICATION_MARKER: ${BACKUP_VERIFICATION_MARKER:-}
+      BACKUP_VERIFICATION_MAX_AGE_HOURS: ${BACKUP_VERIFICATION_MAX_AGE_HOURS:-48}
     ports:
       - "8080:8080"
     volumes:

@@ -20,6 +20,10 @@ jobs:
         with:
           name: android-debug-apk
           path: androidApp/build/outputs/apk/debug/*.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-distribution
+          path: webApp/build/dist/wasmJs/productionExecutable
       - uses: actions/setup-node@v4
         with:
           node-version: '22'

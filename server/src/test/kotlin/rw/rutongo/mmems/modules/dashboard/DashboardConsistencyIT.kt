@@ -20,6 +20,7 @@ import java.time.Instant
 import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 @Testcontainers(disabledWithoutDocker = true)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -60,7 +61,7 @@ class DashboardConsistencyIT {
     }
 
     @Test
-    fun `manager dashboard matches direct sql aggregates`() {
+    fun `all dashboards match direct sql aggregates`() {
         val site = createSite("DASH")
         val manager = createActor(Role.MANAGER, site)
         val type = createEquipmentType()
@@ -79,7 +80,20 @@ class DashboardConsistencyIT {
         createMaintenance(site, type, manager, fixedNow.minusSeconds(3600))
         createReport(site, manager, fixedNow.minusSeconds(3600))
 
-        val dashboard = service.get(manager, DashboardKind.MANAGER, site, from, fixedNow)
+        assertDashboard(site, manager, DashboardKind.MANAGER)
+        listOf(
+            DashboardKind.MECHANIC to Role.MECHANIC,
+            DashboardKind.SUPERVISOR to Role.SUPERVISOR,
+            DashboardKind.EXECUTIVE to Role.GENERAL_MANAGER,
+        ).forEach { (kind, role) -> assertDashboard(site, createActor(role, site), kind) }
+    }
+
+    private fun assertDashboard(
+        site: UUID,
+        actor: Principal,
+        kind: DashboardKind,
+    ) {
+        val dashboard = service.get(actor, kind, site, from, fixedNow)
 
         assertEquals(scalarInt("select count(*) from equipment where site_id=? and lifecycle_state='ACTIVE'", site), dashboard.equipment.total)
         assertEquals(scalarInt("select count(*) from equipment where site_id=? and current_status='DOWN' and lifecycle_state='ACTIVE'", site), dashboard.equipment.down)
@@ -91,11 +105,15 @@ class DashboardConsistencyIT {
         assertEquals(scalarInt("select count(*) from breakdown where site_id=? and state not in ('RESOLVED','CLOSED')", site), dashboard.breakdowns.open)
         assertEquals(180, dashboard.breakdowns.downtimeMinutes)
         assertEquals(scalarInt("select count(*) from maintenance_record where site_id=?", site), dashboard.maintenance.recorded)
-        assertEquals(scalarLong("select coalesce(sum(total_cost),0) from maintenance_record where site_id=?", site), dashboard.costs?.totalCost)
+        if (actor.role in setOf(Role.MANAGER, Role.GENERAL_MANAGER, Role.ADMINISTRATOR)) {
+            assertEquals(scalarLong("select coalesce(sum(total_cost),0) from maintenance_record where site_id=?", site), dashboard.costs?.totalCost)
+            assertNotNull(dashboard.costs)
+        } else {
+            assertNull(dashboard.costs)
+        }
         assertEquals(scalarInt("select count(*) from report_version rv join daily_report dr on dr.id=rv.report_id where dr.site_id=? and rv.state='SUBMITTED'", site), dashboard.reports.submitted)
         assertEquals(scalarInt("select count(*) from report_version rv join daily_report dr on dr.id=rv.report_id where dr.site_id=? and rv.state='APPROVED'", site), dashboard.reports.approved)
         assertEquals(1, dashboard.sites.size)
-        assertNotNull(dashboard.costs)
     }
 
     private fun createSite(code: String): UUID {
