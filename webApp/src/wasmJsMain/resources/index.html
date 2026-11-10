@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' http://localhost:8080 http://127.0.0.1:8080 https:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'">
   <link rel="icon" href="data:,">
   <title>Rutongo MMEMS</title>
   <style>
@@ -14,12 +15,7 @@
 </head>
 <body>
 <div id="composeApp"></div>
-<script>
-  if (!globalThis.RUTONGO_API_BASE) {
-    const api = new URLSearchParams(globalThis.location.search).get("api");
-    if (api) globalThis.RUTONGO_API_BASE = api;
-  }
-</script>
+<script type="application/javascript" src="config.js"></script>
 <script type="application/javascript" src="rutongo-mmems-web.js"></script>
 </body>
 </html>

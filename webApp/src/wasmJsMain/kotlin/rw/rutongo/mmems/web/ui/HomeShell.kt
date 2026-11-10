@@ -33,13 +33,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import rw.rutongo.mmems.shared.web.WebTab
+import rw.rutongo.mmems.shared.web.labelFor
 import rw.rutongo.mmems.shared.web.tabsFor
 import rw.rutongo.mmems.web.WebIntent
 import rw.rutongo.mmems.web.WebState
 import rw.rutongo.mmems.web.ui.components.StatusBadge
+import rw.rutongo.mmems.web.ui.screens.ActiveProblemsScreen
 import rw.rutongo.mmems.web.ui.screens.ConfigurationScreen
 import rw.rutongo.mmems.web.ui.screens.DashboardScreen
 import rw.rutongo.mmems.web.ui.screens.EquipmentScreen
+import rw.rutongo.mmems.web.ui.screens.InspectionsScreen
+import rw.rutongo.mmems.web.ui.screens.MaintenanceScreen
 import rw.rutongo.mmems.web.ui.screens.MoreScreen
 import rw.rutongo.mmems.web.ui.screens.OperationsScreen
 import rw.rutongo.mmems.web.ui.screens.PeopleScreen
@@ -65,8 +69,8 @@ fun HomeShell(
                             NavigationBarItem(
                                 selected = current == tab,
                                 onClick = { onIntent(WebIntent.SelectTab(tab)) },
-                                icon = { Text(tab.label.take(1), fontWeight = FontWeight.Bold) },
-                                label = { Text(tab.label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                                icon = { Text(tab.labelFor(me.role).take(1), fontWeight = FontWeight.Bold) },
+                                label = { Text(tab.labelFor(me.role), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             )
                         }
                     }
@@ -90,13 +94,13 @@ fun HomeShell(
                                                 .padding(horizontal = 10.dp, vertical = 6.dp),
                                     ) {
                                         Text(
-                                            tab.label.take(1),
+                                            tab.labelFor(me.role).take(1),
                                             color = if (current == tab) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                                             fontWeight = FontWeight.Bold,
                                         )
                                     }
                                 },
-                                label = { Text(tab.label) },
+                                label = { Text(tab.labelFor(me.role)) },
                             )
                         }
                     }
@@ -119,6 +123,9 @@ private fun Screen(
         WebTab.DASHBOARD -> DashboardScreen(state, onIntent)
         WebTab.SITES -> SitesScreen(state, onIntent)
         WebTab.EQUIPMENT -> EquipmentScreen(state, onIntent)
+        WebTab.INSPECTIONS -> InspectionsScreen(state, onIntent)
+        WebTab.ACTIVE_PROBLEMS -> ActiveProblemsScreen(state, onIntent)
+        WebTab.MAINTENANCE -> MaintenanceScreen(state, onIntent)
         WebTab.REPORTS -> ReportsScreen(state, onIntent)
         WebTab.OPERATIONS -> OperationsScreen(state, onIntent)
         WebTab.PEOPLE -> PeopleScreen(state, onIntent)

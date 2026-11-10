@@ -11,6 +11,9 @@ enum class WebTab(
     DASHBOARD("Dashboard"),
     SITES("Sites"),
     EQUIPMENT("Equipment"),
+    INSPECTIONS("Inspections"),
+    ACTIVE_PROBLEMS("Active Problems"),
+    MAINTENANCE("Maintenance"),
     REPORTS("Reports"),
     OPERATIONS("Operations"),
     PEOPLE("People"),
@@ -21,12 +24,22 @@ enum class WebTab(
 fun tabsFor(role: Role): List<WebTab> =
     when (role) {
         Role.MECHANIC -> listOf(WebTab.DASHBOARD, WebTab.EQUIPMENT, WebTab.MORE)
-        Role.SUPERVISOR -> listOf(WebTab.DASHBOARD, WebTab.EQUIPMENT, WebTab.REPORTS, WebTab.MORE)
+        Role.SUPERVISOR ->
+            listOf(
+                WebTab.DASHBOARD,
+                WebTab.INSPECTIONS,
+                WebTab.ACTIVE_PROBLEMS,
+                WebTab.REPORTS,
+                WebTab.MAINTENANCE,
+                WebTab.MORE,
+            )
         Role.MANAGER, Role.GENERAL_MANAGER -> listOf(WebTab.DASHBOARD, WebTab.SITES, WebTab.EQUIPMENT, WebTab.REPORTS, WebTab.MORE)
         Role.ADMINISTRATOR -> listOf(WebTab.DASHBOARD, WebTab.OPERATIONS, WebTab.PEOPLE, WebTab.CONFIGURATION, WebTab.MORE)
     }
 
 fun defaultTab(role: Role): WebTab = tabsFor(role).first()
+
+fun WebTab.labelFor(role: Role): String = if (this == WebTab.REPORTS && role == Role.SUPERVISOR) "Daily report" else label
 
 fun dashboardKindFor(role: Role): DashboardKind =
     when (role) {

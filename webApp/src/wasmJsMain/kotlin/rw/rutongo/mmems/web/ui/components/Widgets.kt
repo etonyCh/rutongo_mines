@@ -154,15 +154,27 @@ fun StatusBadge(
                 .background(color.copy(alpha = 0.12f))
                 .padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
-        Text(text.replace('_', ' '), color = color, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(statusIcon(text), color = color, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
+            Text(text.replace('_', ' '), color = color, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
+        }
     }
 }
+
+fun statusIcon(text: String): String =
+    when (text.uppercase()) {
+        "APPROVED", "OPERATIONAL", "ACTIVE", "COMPLETED", "VERIFIED", "COMMITTED", "OK" -> "✓"
+        "DOWN", "REJECTED", "CRITICAL", "OVERDUE", "FAIL" -> "!"
+        "UNDER_REPAIR", "SUBMITTED", "PENDING", "DUE_SOON", "RETURNED", "RETURNED_FOR_CORRECTION", "AWAITING_APPROVAL", "PREVIEWED", "PENDING_VERIFICATION" -> "▲"
+        "OPEN", "IN_PROGRESS", "RESUBMITTED" -> "●"
+        else -> "•"
+    }
 
 fun statusColor(text: String): Color =
     when (text.uppercase()) {
         "APPROVED", "OPERATIONAL", "ACTIVE", "COMPLETED", "VERIFIED", "COMMITTED", "OK" -> SuccessGreen
         "DOWN", "REJECTED", "CRITICAL", "OVERDUE", "FAIL" -> DangerRed
-        "UNDER_REPAIR", "SUBMITTED", "PENDING", "DUE_SOON", "RETURNED", "RETURNED_FOR_CORRECTION", "AWAITING_APPROVAL", "PREVIEWED" -> WarningAmber
+        "UNDER_REPAIR", "SUBMITTED", "PENDING", "DUE_SOON", "RETURNED", "RETURNED_FOR_CORRECTION", "AWAITING_APPROVAL", "PREVIEWED", "PENDING_VERIFICATION", "CORRECTION_REQUESTED" -> WarningAmber
         "OPEN", "IN_PROGRESS", "RESUBMITTED" -> InfoBlue
         else -> Color(0xFF5E6B64)
     }

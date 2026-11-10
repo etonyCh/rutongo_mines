@@ -2,13 +2,17 @@ package rw.rutongo.mmems.web
 
 import rw.rutongo.mmems.shared.api.DashboardDto
 import rw.rutongo.mmems.shared.api.EquipmentDto
+import rw.rutongo.mmems.shared.api.ExpectedInspectionDto
 import rw.rutongo.mmems.shared.api.ExportDatasetDto
+import rw.rutongo.mmems.shared.api.MaintenanceViewDto
 import rw.rutongo.mmems.shared.api.MeView
 import rw.rutongo.mmems.shared.api.NotificationRuleDto
 import rw.rutongo.mmems.shared.api.NotificationRuleUpdateDto
 import rw.rutongo.mmems.shared.api.ReportViewDto
 import rw.rutongo.mmems.shared.api.SiteDto
+import rw.rutongo.mmems.shared.enums.ReportPeriod
 import rw.rutongo.mmems.shared.web.WebTab
+import rw.rutongo.mmems.web.data.ActiveProblemRow
 import rw.rutongo.mmems.web.data.AuditEventRow
 import rw.rutongo.mmems.web.data.ImportPreview
 import rw.rutongo.mmems.web.data.ImportProfile
@@ -33,6 +37,14 @@ data class WebState(
     val equipmentBusy: Boolean = false,
     val reports: List<ReportViewDto>? = null,
     val reportsBusy: Boolean = false,
+    val reportActionBusy: Boolean = false,
+    val inspections: List<ExpectedInspectionDto>? = null,
+    val inspectionsBusy: Boolean = false,
+    val activeProblems: List<ActiveProblemRow>? = null,
+    val activeProblemsBusy: Boolean = false,
+    val maintenance: List<MaintenanceViewDto>? = null,
+    val maintenanceBusy: Boolean = false,
+    val maintenanceActionBusy: Boolean = false,
     val users: List<WebUser>? = null,
     val usersBusy: Boolean = false,
     val auditEvents: List<AuditEventRow>? = null,
@@ -77,6 +89,52 @@ sealed interface WebIntent {
     data class DownloadReportPdf(
         val reportId: String,
         val versionNo: Int,
+    ) : WebIntent
+
+    data class SubmitReport(
+        val reportId: String,
+        val versionNo: Int,
+    ) : WebIntent
+
+    data class ApproveReport(
+        val reportId: String,
+        val versionNo: Int,
+        val comment: String?,
+    ) : WebIntent
+
+    data class ReturnReport(
+        val reportId: String,
+        val versionNo: Int,
+        val reason: String,
+    ) : WebIntent
+
+    data class VerifyMaintenance(
+        val id: String,
+        val version: Long,
+        val comment: String? = null,
+    ) : WebIntent
+
+    data class RejectMaintenance(
+        val id: String,
+        val version: Long,
+        val comment: String? = null,
+    ) : WebIntent
+
+    data class RequestMaintenanceCorrection(
+        val id: String,
+        val version: Long,
+        val comment: String? = null,
+    ) : WebIntent
+
+    data class CreateReport(
+        val siteId: String,
+        val reportDate: String,
+        val period: ReportPeriod,
+        val executiveSummary: String?,
+        val safetyObservations: String?,
+        val maintenanceSummary: String?,
+        val recommendations: String?,
+        val remarks: String?,
     ) : WebIntent
 
     data class ChangePassword(

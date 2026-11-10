@@ -29,6 +29,23 @@ class WebNavigationTest {
     }
 
     @Test
+    fun `supervisor navigation matches the specification`() {
+        assertEquals(
+            listOf(
+                WebTab.DASHBOARD,
+                WebTab.INSPECTIONS,
+                WebTab.ACTIVE_PROBLEMS,
+                WebTab.REPORTS,
+                WebTab.MAINTENANCE,
+                WebTab.MORE,
+            ),
+            tabsFor(Role.SUPERVISOR),
+        )
+        assertEquals("Daily report", WebTab.REPORTS.labelFor(Role.SUPERVISOR))
+        assertFalse(WebTab.PEOPLE.isVisibleFor(Role.SUPERVISOR))
+    }
+
+    @Test
     fun `general manager receives the executive dashboard`() {
         assertEquals(DashboardKind.EXECUTIVE, dashboardKindFor(Role.GENERAL_MANAGER))
         assertEquals(DashboardKind.MANAGER, dashboardKindFor(Role.MANAGER))

@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 import rw.rutongo.mmems.shared.api.MeView
+import rw.rutongo.mmems.shared.api.ReportNarrativeDto
+import rw.rutongo.mmems.shared.api.ReportViewDto
 import rw.rutongo.mmems.shared.web.WebTab
 import rw.rutongo.mmems.shared.web.dashboardKindFor
 import rw.rutongo.mmems.shared.web.defaultTab
@@ -45,6 +47,13 @@ class WebViewModel(
             is WebIntent.SelectSite -> selectSite(intent.siteId)
             WebIntent.Refresh -> refreshCurrent()
             is WebIntent.DownloadReportPdf -> downloadPdf(intent.reportId, intent.versionNo)
+            is WebIntent.SubmitReport -> submitReport(intent.reportId, intent.versionNo)
+            is WebIntent.ApproveReport -> approveReport(intent.reportId, intent.versionNo, intent.comment)
+            is WebIntent.ReturnReport -> returnReport(intent.reportId, intent.versionNo, intent.reason)
+            is WebIntent.VerifyMaintenance -> maintenanceAction(intent.id, intent.version, intent.comment, "verify")
+            is WebIntent.RejectMaintenance -> maintenanceAction(intent.id, intent.version, intent.comment, "reject")
+            is WebIntent.RequestMaintenanceCorrection -> maintenanceAction(intent.id, intent.version, intent.comment, "correction")
+            is WebIntent.CreateReport -> createReport(intent)
             is WebIntent.ChangePassword -> changePassword(intent.current, intent.new, intent.confirm)
             is WebIntent.CreateUser -> createUser(intent)
             is WebIntent.SetUserActive -> setUserActive(intent.id, intent.active)
@@ -192,6 +201,9 @@ class WebViewModel(
                 loadDashboard()
             }
             WebTab.EQUIPMENT -> loadEquipment()
+            WebTab.INSPECTIONS -> loadInspections()
+            WebTab.ACTIVE_PROBLEMS -> loadActiveProblems()
+            WebTab.MAINTENANCE -> loadMaintenance()
             WebTab.REPORTS -> loadReports()
             WebTab.OPERATIONS -> loadOperations()
             WebTab.PEOPLE -> {
@@ -229,6 +241,48 @@ class WebViewModel(
                 }
                 is WebResult.Failure -> {
                     _state.value = _state.value.copy(equipmentBusy = false)
+                    handleFailure(result)
+                }
+            }
+        }
+    }
+
+    private fun loadInspections() {
+        val siteId = _state.value.selectedSiteId
+        scope.launch {
+            _state.value = _state.value.copy(inspectionsBusy = true)
+            when (val result = api.inspections(siteId)) {
+                is WebResult.Success -> _state.value = _state.value.copy(inspections = result.value, inspectionsBusy = false)
+                is WebResult.Failure -> {
+                    _state.value = _state.value.copy(inspectionsBusy = false)
+                    handleFailure(result)
+                }
+            }
+        }
+    }
+
+    private fun loadActiveProblems() {
+        val siteId = _state.value.selectedSiteId
+        scope.launch {
+            _state.value = _state.value.copy(activeProblemsBusy = true)
+            when (val result = api.activeProblems(siteId)) {
+                is WebResult.Success -> _state.value = _state.value.copy(activeProblems = result.value, activeProblemsBusy = false)
+                is WebResult.Failure -> {
+                    _state.value = _state.value.copy(activeProblemsBusy = false)
+                    handleFailure(result)
+                }
+            }
+        }
+    }
+
+    private fun loadMaintenance() {
+        val siteId = _state.value.selectedSiteId
+        scope.launch {
+            _state.value = _state.value.copy(maintenanceBusy = true)
+            when (val result = api.maintenance(siteId)) {
+                is WebResult.Success -> _state.value = _state.value.copy(maintenance = result.value, maintenanceBusy = false)
+                is WebResult.Failure -> {
+                    _state.value = _state.value.copy(maintenanceBusy = false)
                     handleFailure(result)
                 }
             }
@@ -398,6 +452,132 @@ class WebViewModel(
                 }
             }
         }
+    }
+
+    private fun maintenanceAction(
+        id: String,
+        version: Long,
+        comment: String?,
+        action: String,
+    ) {
+        if (_state.value.maintenanceActionBusy) return
+        scope.launch {
+            _state.value = _state.value.copy(maintenanceActionBusy = true)
+            val result =
+                when (action) {
+                    "verify" -> api.verifyMaintenance(id, version, comment)
+                    "reject" -> api.rejectMaintenance(id, version, comment)
+                    else -> api.requestMaintenanceCorrection(id, version, comment)
+                }
+            when (result) {
+                is WebResult.Success -> {
+                    val records =
+                        _state.value.maintenance
+                            .orEmpty()
+                            .map { if (it.id == result.value.id) result.value else it }
+                    _state.value = _state.value.copy(maintenance = records, maintenanceActionBusy = false)
+                    emitMessage(
+                        when (action) {
+                            "verify" -> "Maintenance verified."
+                            "reject" -> "Maintenance rejected."
+                            else -> "Correction requested."
+                        },
+                    )
+                }
+                is WebResult.Failure -> {
+                    _state.value = _state.value.copy(maintenanceActionBusy = false)
+                    handleFailure(result)
+                }
+            }
+        }
+    }
+
+    private fun submitReport(
+        reportId: String,
+        versionNo: Int,
+    ) {
+        if (_state.value.reportActionBusy) return
+        scope.launch {
+            _state.value = _state.value.copy(reportActionBusy = true)
+            when (val result = api.submitReport(reportId, versionNo)) {
+                is WebResult.Success -> finishReportAction(result.value, "Report submitted for approval.")
+                is WebResult.Failure -> failReportAction(result)
+            }
+        }
+    }
+
+    private fun approveReport(
+        reportId: String,
+        versionNo: Int,
+        comment: String?,
+    ) {
+        if (_state.value.reportActionBusy) return
+        scope.launch {
+            _state.value = _state.value.copy(reportActionBusy = true)
+            when (val result = api.approveReport(reportId, versionNo, comment)) {
+                is WebResult.Success -> finishReportAction(result.value, "Report approved.")
+                is WebResult.Failure -> failReportAction(result)
+            }
+        }
+    }
+
+    private fun returnReport(
+        reportId: String,
+        versionNo: Int,
+        reason: String,
+    ) {
+        if (reason.isBlank()) {
+            emitMessage("A correction reason is required.")
+            return
+        }
+        if (_state.value.reportActionBusy) return
+        scope.launch {
+            _state.value = _state.value.copy(reportActionBusy = true)
+            when (val result = api.returnReport(reportId, versionNo, reason)) {
+                is WebResult.Success -> finishReportAction(result.value, "Report returned for correction.")
+                is WebResult.Failure -> failReportAction(result)
+            }
+        }
+    }
+
+    private fun createReport(intent: WebIntent.CreateReport) {
+        if (_state.value.reportActionBusy) return
+        scope.launch {
+            _state.value = _state.value.copy(reportActionBusy = true)
+            val narrative =
+                ReportNarrativeDto(
+                    executiveSummary = intent.executiveSummary?.trim()?.takeIf { it.isNotEmpty() },
+                    safetyObservations = intent.safetyObservations?.trim()?.takeIf { it.isNotEmpty() },
+                    maintenanceSummary = intent.maintenanceSummary?.trim()?.takeIf { it.isNotEmpty() },
+                    recommendations = intent.recommendations?.trim()?.takeIf { it.isNotEmpty() },
+                    remarks = intent.remarks?.trim()?.takeIf { it.isNotEmpty() },
+                )
+            when (val result = api.createReport(intent.siteId, intent.reportDate, intent.period, narrative)) {
+                is WebResult.Success -> {
+                    val reports = _state.value.reports.orEmpty()
+                    _state.value = _state.value.copy(reports = listOf(result.value) + reports.filterNot { it.id == result.value.id }, reportActionBusy = false)
+                    emitMessage("Report ${result.value.reportRef} created.")
+                }
+                is WebResult.Failure -> failReportAction(result)
+            }
+        }
+    }
+
+    private fun finishReportAction(
+        report: ReportViewDto,
+        message: String,
+    ) {
+        val reports =
+            _state.value.reports
+                .orEmpty()
+                .map { if (it.id == report.id) report else it }
+        _state.value = _state.value.copy(reports = reports, reportActionBusy = false)
+        emitMessage(message)
+    }
+
+    private fun failReportAction(result: WebResult.Failure) {
+        _state.value = _state.value.copy(reportActionBusy = false)
+        handleFailure(result)
     }
 
     private fun downloadPdf(

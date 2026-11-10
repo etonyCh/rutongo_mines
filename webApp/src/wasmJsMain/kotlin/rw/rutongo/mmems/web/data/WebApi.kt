@@ -31,15 +31,22 @@ import kotlinx.serialization.json.Json
 import rw.rutongo.mmems.shared.api.ApiErrorView
 import rw.rutongo.mmems.shared.api.DashboardDto
 import rw.rutongo.mmems.shared.api.EquipmentDto
+import rw.rutongo.mmems.shared.api.ExpectedInspectionDto
 import rw.rutongo.mmems.shared.api.ExportDatasetDto
 import rw.rutongo.mmems.shared.api.LoginRequest
+import rw.rutongo.mmems.shared.api.MaintenanceActionDto
+import rw.rutongo.mmems.shared.api.MaintenanceViewDto
 import rw.rutongo.mmems.shared.api.MeView
 import rw.rutongo.mmems.shared.api.NotificationRuleDto
 import rw.rutongo.mmems.shared.api.NotificationRuleUpdateDto
 import rw.rutongo.mmems.shared.api.RefreshRequest
+import rw.rutongo.mmems.shared.api.ReportActionDto
+import rw.rutongo.mmems.shared.api.ReportCreateDto
+import rw.rutongo.mmems.shared.api.ReportNarrativeDto
 import rw.rutongo.mmems.shared.api.ReportViewDto
 import rw.rutongo.mmems.shared.api.SessionResponse
 import rw.rutongo.mmems.shared.api.SiteDto
+import rw.rutongo.mmems.shared.enums.ReportPeriod
 import kotlin.io.encoding.Base64
 
 @Serializable private data class CreateUserBody(
@@ -81,6 +88,22 @@ sealed interface WebResult<out T> {
     val active: Boolean,
     val siteIds: List<String> = emptyList(),
     val version: Long = 0,
+)
+
+@Serializable data class ActiveProblemRow(
+    val id: String,
+    val equipmentId: String,
+    val sequence: Long = 0,
+    val previousStatus: String? = null,
+    val newStatus: String,
+    val problem: String? = null,
+    val actionTaken: String? = null,
+    val partsRequired: String? = null,
+    val remarks: String? = null,
+    val siteId: String,
+    val occurredAt: String,
+    val userEid: String? = null,
+    val source: String? = null,
 )
 
 @Serializable data class AuditEventRow(
@@ -187,6 +210,11 @@ private external fun nowIso(): String
 @JsFun("(days) => new Date(Date.now() - days * 86400000).toISOString()")
 private external fun daysAgoIso(days: Int): String
 
+@JsFun("() => new Date().toISOString().slice(0, 10)")
+private external fun jsTodayDate(): String
+
+fun todayDate(): String = jsTodayDate()
+
 class WebApi(
     baseUrl: String,
     private val json: Json =
@@ -243,6 +271,60 @@ class WebApi(
         return authorized(HttpMethod.Get, "/api/v1/dashboard/$kind$query")
     }
 
+    suspend fun inspections(siteId: String? = null): WebResult<List<ExpectedInspectionDto>> {
+        val query = if (siteId.isNullOrBlank()) "" else "?siteId=$siteId"
+        return authorized(HttpMethod.Get, "/api/v1/inspections/control$query")
+    }
+
+    suspend fun activeProblems(siteId: String? = null): WebResult<List<ActiveProblemRow>> {
+        val query =
+            buildString {
+                append("?limit=200")
+                if (!siteId.isNullOrBlank()) append("&siteId=").append(siteId)
+            }
+        return authorized(HttpMethod.Get, "/api/v1/active-problems$query")
+    }
+
+    suspend fun maintenance(siteId: String? = null): WebResult<List<MaintenanceViewDto>> {
+        val query =
+            buildString {
+                append("?limit=200")
+                if (!siteId.isNullOrBlank()) append("&siteId=").append(siteId)
+            }
+        return authorized(HttpMethod.Get, "/api/v1/maintenance$query")
+    }
+
+    suspend fun verifyMaintenance(
+        id: String,
+        version: Long,
+        comment: String? = null,
+    ): WebResult<MaintenanceViewDto> = maintenanceAction(id, version, "verify", comment)
+
+    suspend fun rejectMaintenance(
+        id: String,
+        version: Long,
+        comment: String? = null,
+    ): WebResult<MaintenanceViewDto> = maintenanceAction(id, version, "reject", comment)
+
+    suspend fun requestMaintenanceCorrection(
+        id: String,
+        version: Long,
+        comment: String? = null,
+    ): WebResult<MaintenanceViewDto> = maintenanceAction(id, version, "request-correction", comment)
+
+    private suspend fun maintenanceAction(
+        id: String,
+        version: Long,
+        action: String,
+        comment: String?,
+    ): WebResult<MaintenanceViewDto> =
+        authorized(
+            HttpMethod.Post,
+            "/api/v1/maintenance/$id/$action",
+            json.encodeToString(MaintenanceActionDto.serializer(), MaintenanceActionDto(comment?.trim()?.takeIf { it.isNotEmpty() })),
+            ifMatch = version.toString(),
+        )
+
     suspend fun reports(
         siteId: String? = null,
         state: String? = null,
@@ -255,6 +337,52 @@ class WebApi(
             }
         return authorized(HttpMethod.Get, "/api/v1/reports$query")
     }
+
+    suspend fun createReport(
+        siteId: String,
+        reportDate: String,
+        period: ReportPeriod,
+        narrative: ReportNarrativeDto,
+    ): WebResult<ReportViewDto> =
+        authorized(
+            HttpMethod.Post,
+            "/api/v1/reports",
+            json.encodeToString(ReportCreateDto.serializer(), ReportCreateDto(siteId, reportDate, period, narrative)),
+        )
+
+    suspend fun submitReport(
+        reportId: String,
+        versionNo: Int,
+    ): WebResult<ReportViewDto> =
+        authorized(
+            HttpMethod.Post,
+            "/api/v1/reports/$reportId/submit",
+            ifMatch = versionNo.toString(),
+        )
+
+    suspend fun approveReport(
+        reportId: String,
+        versionNo: Int,
+        comment: String?,
+    ): WebResult<ReportViewDto> =
+        authorized(
+            HttpMethod.Post,
+            "/api/v1/reports/$reportId/approve",
+            json.encodeToString(ReportActionDto.serializer(), ReportActionDto(comment = comment?.trim()?.takeIf { it.isNotEmpty() })),
+            ifMatch = versionNo.toString(),
+        )
+
+    suspend fun returnReport(
+        reportId: String,
+        versionNo: Int,
+        reason: String,
+    ): WebResult<ReportViewDto> =
+        authorized(
+            HttpMethod.Post,
+            "/api/v1/reports/$reportId/return",
+            json.encodeToString(ReportActionDto.serializer(), ReportActionDto(reason = reason.trim())),
+            ifMatch = versionNo.toString(),
+        )
 
     suspend fun users(): WebResult<List<WebUser>> = authorized(HttpMethod.Get, "/api/v1/users")
 
@@ -440,7 +568,18 @@ class WebApi(
         method: HttpMethod,
         path: String,
         body: String? = null,
-    ): WebResult<T> = authorizedRequest { raw(method, path, body, token = accessToken) }
+        ifMatch: String? = null,
+    ): WebResult<T> =
+        authorizedRequest {
+            raw(
+                method,
+                path,
+                body,
+                body?.let { ContentType.Application.Json.toString() },
+                token = accessToken,
+                ifMatch = ifMatch,
+            )
+        }
 
     private suspend inline fun <reified T> authorizedRequest(crossinline request: suspend () -> HttpResponse): WebResult<T> {
         var response = runCatching { request() }.getOrElse { return WebResult.Failure("NETWORK", it.message ?: "The server is unreachable.") }
@@ -461,34 +600,37 @@ class WebApi(
         body: String? = null,
         contentTypeValue: String? = null,
         token: String? = null,
+        ifMatch: String? = null,
     ): HttpResponse =
         when (method) {
-            HttpMethod.Get -> client.get("$base$path") { requestHeaders(token) }
+            HttpMethod.Get -> client.get("$base$path") { requestHeaders(token, ifMatch = ifMatch) }
             HttpMethod.Post ->
                 client.post("$base$path") {
-                    requestHeaders(token, contentTypeValue)
+                    requestHeaders(token, contentTypeValue, ifMatch)
                     body?.let { setBody(it) }
                 }
             HttpMethod.Put ->
                 client.put("$base$path") {
-                    requestHeaders(token, contentTypeValue)
+                    requestHeaders(token, contentTypeValue, ifMatch)
                     body?.let { setBody(it) }
                 }
             HttpMethod.Patch ->
                 client.patch("$base$path") {
-                    requestHeaders(token, contentTypeValue)
+                    requestHeaders(token, contentTypeValue, ifMatch)
                     body?.let { setBody(it) }
                 }
-            HttpMethod.Delete -> client.delete("$base$path") { requestHeaders(token) }
+            HttpMethod.Delete -> client.delete("$base$path") { requestHeaders(token, ifMatch = ifMatch) }
             else -> error("Unsupported method $method")
         }
 
     private fun io.ktor.client.request.HttpRequestBuilder.requestHeaders(
         token: String?,
         contentTypeValue: String? = null,
+        ifMatch: String? = null,
     ) {
         token?.let { header(HttpHeaders.Authorization, "Bearer $it") }
         contentTypeValue?.let { header(HttpHeaders.ContentType, it) }
+        ifMatch?.let { header(HttpHeaders.IfMatch, it) }
     }
 
     private suspend inline fun <reified T> decodeResponse(response: HttpResponse): WebResult<T> {

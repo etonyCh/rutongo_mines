@@ -1,10 +1,14 @@
 package rw.rutongo.mmems.web.ui
 
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 
 private val Forest = Color(0xFF1F5A43)
 private val ForestDark = Color(0xFF154030)
@@ -39,7 +43,10 @@ private val colors =
         onError = Color.White,
     )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RutongoTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = colors, typography = Typography(), content = content)
+    CompositionLocalProvider(LocalMinimumInteractiveComponentSize provides 56.dp) {
+        MaterialTheme(colorScheme = colors, typography = Typography(), content = content)
+    }
 }

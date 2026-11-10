@@ -14,12 +14,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import rw.rutongo.mmems.shared.web.comparisonRows
+import rw.rutongo.mmems.shared.web.tabsFor
 import rw.rutongo.mmems.web.data.WebApi
 import rw.rutongo.mmems.web.data.apiBaseUrl
 import rw.rutongo.mmems.web.ui.ChangePasswordScreen
 import rw.rutongo.mmems.web.ui.HomeShell
 import rw.rutongo.mmems.web.ui.LoginScreen
 import rw.rutongo.mmems.web.ui.RutongoTheme
+import rw.rutongo.mmems.web.ui.publishAutomationStatus
 
 @Composable
 fun App() {
@@ -27,6 +30,14 @@ fun App() {
     DisposableEffect(viewModel) { onDispose { viewModel.close() } }
     val state by viewModel.state.collectAsState()
     val snackbar = remember { SnackbarHostState() }
+    val automationStatus =
+        "stage=${state.stage};tab=${state.tab?.name ?: "-"};role=${state.me?.role?.name ?: "-"};" +
+            "tabs=${state.me?.let { tabsFor(it.role).joinToString(",") { tab -> tab.name } } ?: "-"};" +
+            "sites=${state.sites.size};comparison=${state.dashboard?.comparisonRows()?.size ?: -1};" +
+            "reports=${state.reports?.size ?: -1};equipment=${state.equipment?.size ?: -1};" +
+            "inspections=${state.inspections?.size ?: -1};problems=${state.activeProblems?.size ?: -1};" +
+            "maintenance=${state.maintenance?.size ?: -1};busy=${state.reportActionBusy || state.maintenanceActionBusy}"
+    LaunchedEffect(automationStatus) { publishAutomationStatus(automationStatus) }
     LaunchedEffect(viewModel) {
         viewModel.effects.collect { effect ->
             when (effect) {
