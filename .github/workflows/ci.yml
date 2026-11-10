@@ -24,6 +24,10 @@ jobs:
         with:
           name: web-distribution
           path: webApp/build/dist/wasmJs/productionExecutable
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server-fat-jar
+          path: server/build/libs/server-all.jar
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -94,3 +98,68 @@ jobs:
           ops/restore.sh "$artifact" mmems_restore
           restored="$(psql -d mmems_restore -tAc "select value from restore_probe")"
           test "$restored" = "preserved"
+
+  security:
+    runs-on: ubuntu-24.04
+    needs: build
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: mmems
+          POSTGRES_USER: mmems
+          POSTGRES_PASSWORD: mmems
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mmems -d mmems"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/download-artifact@v4
+        with:
+          name: server-fat-jar
+          path: server/build/libs
+      - name: Start API
+        env:
+          APP_ENV: test
+          HSTS_ENABLED: 'true'
+          DATABASE_URL: jdbc:postgresql://127.0.0.1:5432/mmems
+          DATABASE_USER: mmems
+          DATABASE_PASSWORD: mmems
+          BLOB_STORAGE_DIR: ${{ runner.temp }}/blobs
+          PORT: '8080'
+        run: |
+          java -jar server/build/libs/server-all.jar > server.log 2>&1 &
+          echo "$!" > server.pid
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8080/readyz >/dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          cat server.log
+          exit 1
+      - name: Run OWASP ZAP baseline scan
+        run: |
+          mkdir -p zap
+          chmod 777 zap
+          docker run --rm --network host \
+            -v "$PWD/zap:/zap/wrk:rw" \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t http://127.0.0.1:8080 -r zap-report.html -J zap-report.json -m 2 -I
+      - name: Upload ZAP report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zap-baseline-report
+          path: zap
+      - name: Show API log
+        if: failure()
+        run: cat server.log

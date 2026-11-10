@@ -48,22 +48,32 @@ class FatJarStartupTest {
                 environment()["DATABASE_PASSWORD"] = postgres.password
                 environment()["PORT"] = port.toString()
                 environment()["BLOB_STORAGE_DIR"] = tempDir.resolve("blobs").toString()
+                environment()["HSTS_ENABLED"] = "true"
             }.start()
 
         try {
             val ready = awaitReady(process, port, log)
-            assertTrue(ready.contains("\"status\":\"ready\""), "Unexpected readiness response: $ready")
+            assertTrue(ready.body().contains("\"status\":\"ready\""), "Unexpected readiness response: ${ready.body()}")
+            assertSecurityHeaders(ready)
             assertMigrated()
         } finally {
             stop(process)
         }
     }
 
+    private fun assertSecurityHeaders(response: HttpResponse<String>) {
+        val headers = response.headers()
+        assertEquals("nosniff", headers.firstValue("X-Content-Type-Options").orElse(null))
+        assertEquals("DENY", headers.firstValue("X-Frame-Options").orElse(null))
+        val hsts = headers.firstValue("Strict-Transport-Security").orElse("")
+        assertTrue(hsts.startsWith("max-age=31536000"))
+    }
+
     private fun awaitReady(
         process: Process,
         port: Int,
         log: Path,
-    ): String {
+    ): HttpResponse<String> {
         val client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build()
         val request =
             HttpRequest
@@ -77,7 +87,7 @@ class FatJarStartupTest {
             check(process.isAlive) { "Fat jar exited before becoming ready:\n${readLog(log)}" }
             try {
                 val response = client.send(request, HttpResponse.BodyHandlers.ofString())
-                if (response.statusCode() == 200) return response.body()
+                if (response.statusCode() == 200) return response
                 lastFailure = IllegalStateException("Readiness returned ${response.statusCode()}: ${response.body()}")
             } catch (e: Exception) {
                 lastFailure = e

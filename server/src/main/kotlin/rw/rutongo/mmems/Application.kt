@@ -142,6 +142,7 @@ fun Application.module() {
         )
     }
     install(ContentNegotiation) { json() }
+    install(securityHeadersPlugin(hstsEnabled()))
     install(CORS) {
         allowMethod(HttpMethod.Get)
         allowMethod(HttpMethod.Post)
@@ -160,6 +161,9 @@ fun Application.module() {
         allowOrigins { origin -> origin in origins }
     }
     install(StatusPages) {
+        exception<RequestTooLargeException> { call, _ ->
+            call.respond(HttpStatusCode.PayloadTooLarge, ApiError("PAYLOAD_TOO_LARGE", "Request body exceeds 25 MiB."))
+        }
         exception<Throwable> { call, cause ->
             if (cause is BadRequestException) {
                 call.respond(HttpStatusCode.BadRequest, ApiError("BAD_REQUEST", "The request is invalid."))
@@ -196,6 +200,10 @@ fun Application.module() {
         eventRoutes(statuses, notifications, identity, signer)
     }
 }
+
+private fun hstsEnabled(): Boolean =
+    System.getenv("HSTS_ENABLED")?.equals("true", ignoreCase = true) == true ||
+        System.getenv("APP_ENV")?.equals("production", ignoreCase = true) == true
 
 fun main(args: Array<String>) {
     if (args.firstOrNull() == "bootstrap-admin") {
