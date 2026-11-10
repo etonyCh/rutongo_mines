@@ -53,3 +53,44 @@ jobs:
         with:
           name: openapi-reference
           path: build/openapi
+
+  backup-restore:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: mmems
+          POSTGRES_USER: mmems
+          POSTGRES_PASSWORD: mmems
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mmems -d mmems"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes postgresql-client
+      - name: Run backup and restore drill
+        env:
+          PGHOST: 127.0.0.1
+          PGPORT: 5432
+          PGDATABASE: mmems
+          PGUSER: mmems
+          PGPASSWORD: mmems
+        run: |
+          set -eu
+          drill_dir="$(mktemp -d)"
+          psql -v ON_ERROR_STOP=1 -c "create table restore_probe(value text not null); insert into restore_probe(value) values ('preserved');"
+          BACKUP_DIR="$drill_dir" ops/backup.sh
+          artifact="$(find "$drill_dir" -name '*.dump' -print -quit)"
+          test -n "$artifact"
+          test -f "$artifact.json"
+          ops/restore.sh "$artifact" mmems_restore
+          restored="$(psql -d mmems_restore -tAc "select value from restore_probe")"
+          test "$restored" = "preserved"
