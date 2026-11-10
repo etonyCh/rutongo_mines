@@ -83,4 +83,18 @@ kover {
     }
 }
 
-tasks.test { useJUnitPlatform() }
+val fatJar = tasks.named<ShadowJar>("shadowJar")
+val fatJarPath =
+    fatJar
+        .get()
+        .archiveFile
+        .get()
+        .asFile
+        .absolutePath
+
+tasks.test {
+    useJUnitPlatform()
+    dependsOn(fatJar)
+    inputs.file(fatJar.flatMap { it.archiveFile })
+    systemProperty("fatJar.path", fatJarPath)
+}
