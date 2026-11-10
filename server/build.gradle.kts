@@ -1,3 +1,4 @@
+import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 import kotlinx.kover.gradle.plugin.dsl.AggregationType
 import kotlinx.kover.gradle.plugin.dsl.CoverageUnit
 
@@ -12,6 +13,25 @@ plugins {
 }
 
 application { mainClass.set("rw.rutongo.mmems.ApplicationKt") }
+
+tasks.named<ShadowJar>("shadowJar") { mergeServiceFiles() }
+
+val verifyFatJarServices by tasks.registering {
+    dependsOn(tasks.named("shadowJar"))
+    val archive = tasks.named<ShadowJar>("shadowJar").flatMap { it.archiveFile }
+    inputs.file(archive)
+    doLast {
+        val serviceFile =
+            zipTree(archive.get().asFile)
+                .matching { include("META-INF/services/org.flywaydb.core.extensibility.Plugin") }
+                .singleFile
+        check(serviceFile.readText().contains("org.flywaydb.core.internal.resource.CoreResourceTypeProvider")) {
+            "Fat jar is missing Flyway service metadata; ShadowJar.mergeServiceFiles() is required"
+        }
+    }
+}
+
+tasks.named("check") { dependsOn(verifyFatJarServices) }
 
 dependencies {
     implementation(project(":shared"))
