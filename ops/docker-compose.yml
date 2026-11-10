@@ -35,6 +35,14 @@ services:
     depends_on:
       db:
         condition: service_healthy
+  web:
+    build:
+      context: ..
+      dockerfile: ops/web.Dockerfile
+    ports:
+      - "8081:80"
+    depends_on:
+      - app
 
 volumes:
   postgres_data:

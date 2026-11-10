@@ -27,6 +27,24 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: npm
+          cache-dependency-path: webApp/e2e/package-lock.json
+      - name: Install web E2E dependencies
+        working-directory: webApp/e2e
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Run web E2E suite
+        working-directory: webApp/e2e
+        run: npm run test:e2e
+      - name: Upload web E2E diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-e2e-diagnostics
+          path: |
+            webApp/e2e/playwright-report
+            webApp/e2e/test-results
       - name: Validate OpenAPI contract
         run: npx --yes @redocly/cli@2.76.0 lint docs/openapi.yaml
       - name: Build API reference

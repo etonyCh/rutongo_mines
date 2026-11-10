@@ -6,7 +6,7 @@ Kotlin monolith for mining equipment maintenance workflows. The implementation f
 
 Sprint 0 foundation, Sprint 1 identity/security, Sprint 2 organization/equipment/import, Sprint 3 status/history, Sprint 4 inspection backend, Sprint 5 offline Android client, Sprint 6 breakdown management, Sprint 7 maintenance/hours, Sprint 8 parts/personnel, Sprint 9 daily reports, Sprint 10 dashboards/notifications/exports and Sprint 11 web client: Gradle multi-project, Ktor API, PostgreSQL/Flyway, hash-chained audit, login and session rotation, site-scoped roles, organization references, equipment directory and movements, configurable Excel imports, status event history and optimistic status updates, Active Problems, a site-scoped SSE event stream, daily inspection expectations, shift-aware deadlines, immutable inspection submissions, defects, corrections, checklist administration, automatic critical-safety status rules, breakdown reporting and repair transitions, defect-to-breakdown links, breakdown photo evidence, overlap-aware downtime calculation, hour-based service intervals with verified-service due status, supervisor maintenance verification, union-based working-hours reporting, a parts catalogue with immutable stock movements, the part-request approval/issue/use/return workflow, low-stock notifications, versioned technician/operator directories, equipment assignments, personnel transfer history, read-only daily report snapshots, immutable report versions, site-scoped PDF generation, role-based dashboards, outbox-driven notifications and audited CSV/XLSX exports.
 
-The web client is a Compose Multiplatform Wasm application for supervisors, managers, general management and administration. It provides role-filtered navigation, management and executive dashboards with site comparison, daily report history and PDF download, equipment search, user administration with an audit trail, notification-rule configuration and controlled XLSX imports plus dataset exports. It is online-only and uses the same shared DTOs and navigation rules as Android. The web refresh token stays in an HttpOnly cookie; refresh calls are CSRF-protected and the API CORS allow-list is configured with `WEB_ORIGINS`.
+The web client is a Compose Multiplatform Wasm application for supervisors, managers, general management and administration. Mechanics use the Android client for inspections, tasks and offline work. The web client provides role-filtered navigation, management and executive dashboards with site comparison, daily report history and PDF download, equipment search, user administration with an audit trail, notification-rule configuration and controlled XLSX imports plus dataset exports. It is online-only and uses the same shared DTOs and navigation rules as Android. The web refresh token stays in an HttpOnly cookie; refresh calls are CSRF-protected and the API CORS allow-list is configured with `WEB_ORIGINS`.
 
 The Android client is offline-first: encrypted tokens and database keys, SQLCipher persistence, a WorkManager outbox with idempotency keys and conflict recovery, cached equipment and maintenance references, status updates, a resumable inspection wizard, engine-hour readings, CameraX photo evidence with client compression, breakdown reporting with repair transitions, maintenance recording and supervisor decisions, service schedules, working-hours summaries, and sync-issue review. The test suites cover inspection validation, submission idempotency, late submissions, critical failures, engine-hour properties, expectation generation, missing marking, shift resolution, photo references, supervisor/manager overrides, offline status failures, stale-status conflicts, photo retry, inspection draft completion, offline breakdown creation and transition ordering, breakdown idempotency and active uniqueness, repair transitions, overlap-aware downtime, defect links, breakdown photo scoping, maintenance idempotency and verification decisions, cost visibility, service catalog versioning, service-due boundaries, higher-service interval reset semantics, union-based working-hours aggregation, Android maintenance outbox caching, parts request idempotency, stock invariants, low-stock deduplication, personnel scoping, assignment replacement, transfer history, daily report snapshots, PDF rendering, report versioning and approval authorization.
 
@@ -18,7 +18,7 @@ Requirements: JDK 21, Gradle 8.13+, Docker Compose.
 docker compose -f ops/docker-compose.yml up --build
 ```
 
-The API health endpoint is available at `http://localhost:8080/health`. The initial site records are seeded by Flyway. Set `POSTGRES_PASSWORD` outside local development.
+The API health endpoint is available at `http://localhost:8080/health`, and the Compose `web` service serves the compiled web client at `http://localhost:8081`. The initial site records are seeded by Flyway. Set `POSTGRES_PASSWORD` outside local development.
 
 ### Bootstrap the first administrator
 
@@ -67,6 +67,19 @@ gradle :webApp:build
 python3 -m http.server 8081 --directory webApp/build/dist/wasmJs/productionExecutable
 ```
 
-Open `http://localhost:8081`. The client targets `http://localhost:8080` by default. Override the API URL with `?api=https://api.example.com` or by defining `globalThis.RUTONGO_API_BASE` before the application script loads. Add the web origin to `WEB_ORIGINS` (comma-separated) and set `COOKIE_SECURE=true` behind HTTPS in production.
+For the containerised route, `docker compose -f ops/docker-compose.yml up --build` builds the Wasm distribution and serves it through nginx on `http://localhost:8081`. The nginx configuration in `ops/nginx.conf` adds CSP, HSTS, frame denial, nosniff, referrer policy, permissions policy and cross-origin isolation headers. If you serve the distribution with another host, reproduce those headers there.
+
+Open `http://localhost:8081`. The client targets `http://localhost:8080` by default. Override the API URL with `?api=https://api.example.com` or by defining `globalThis.RUTONGO_API_BASE` in `config.js` before the application script loads. The default CSP permits API calls to the same origin, `http://localhost:8080`, `http://127.0.0.1:8080` and HTTPS origins; add any other HTTP API origin to `connect-src` in both `index.html` and the production host headers. Add the web origin to `WEB_ORIGINS` (comma-separated) and set `COOKIE_SECURE=true` behind HTTPS in production.
+
+The Playwright suite in `webApp/e2e` serves the production distribution on port 8091, mocks the API, and covers manager login from an expired session, manager dashboard/site comparison, supervisor navigation and the reports route. It requires a built distribution.
+
+```sh
+cd webApp/e2e
+npm ci
+npx playwright install chromium
+npm run test:e2e
+```
+
+Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to use an existing Chromium or Chrome binary. CI installs the Playwright browser, runs the suite after the Gradle build and uploads traces/screenshots when it fails.
 
 The current HTTP contract is documented in [`docs/openapi.yaml`](docs/openapi.yaml). It covers authentication, users, organization, personnel, equipment, status, import, inspection, defect, breakdown, maintenance, working hours, parts, stock, report, photo, dashboard, notification and export endpoints, including `If-Match`, `Idempotency-Key`, error responses and SSE resumption headers. CI runs the full Gradle build, validates the contract with Redocly and publishes the generated reference and debug APK as build artifacts. CI also enforces `ktlint`, `detekt` with per-module baselines, Konsist architecture rules and Kover coverage thresholds.

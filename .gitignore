@@ -3,3 +3,6 @@
 .idea/
 /data/
 *.iml
+**/node_modules/
+webApp/e2e/playwright-report/
+webApp/e2e/test-results/
