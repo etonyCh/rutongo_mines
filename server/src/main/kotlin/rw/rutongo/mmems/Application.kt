@@ -57,6 +57,8 @@ import rw.rutongo.mmems.modules.workinghours.workingHoursRoutes
 import rw.rutongo.mmems.platform.BlobStore
 import rw.rutongo.mmems.platform.Clock
 import rw.rutongo.mmems.platform.PrivateFileBlobStore
+import rw.rutongo.mmems.platform.Readiness
+import rw.rutongo.mmems.platform.ReadinessResponse
 import java.nio.file.Path
 import java.time.Instant
 import org.koin.dsl.module as koinModule
@@ -96,7 +98,9 @@ fun Application.module() {
     val workingHours = WorkingHoursService(dataSource)
     val parts = PartsService(dataSource)
     val personnel = PersonnelService(dataSource)
-    val blobStore = PrivateFileBlobStore(Path.of(System.getenv("BLOB_STORAGE_DIR") ?: "data/blobs"))
+    val blobStorageDirectory = Path.of(System.getenv("BLOB_STORAGE_DIR") ?: "data/blobs")
+    val blobStore = PrivateFileBlobStore(blobStorageDirectory)
+    val readiness = Readiness(dataSource, blobStorageDirectory)
     val photos = PhotoService(dataSource, blobStore)
     val reports = ReportService(dataSource, blobStore, ReportSnapshotBuilder(dataSource), DailyReportPdfRenderer())
     val dashboards = DashboardService(dataSource)
@@ -110,8 +114,10 @@ fun Application.module() {
         inspectionScheduler.start()
         notificationScheduler.start()
         operationsScheduler.start()
+        readiness.markStarted()
     }
     environment.monitor.subscribe(ApplicationStopped) {
+        readiness.markStopped()
         inspectionScheduler.stop()
         notificationScheduler.stop()
         operationsScheduler.stop()
@@ -166,6 +172,12 @@ fun Application.module() {
     }
     routing {
         get("/health") { call.respond(mapOf("status" to "ok")) }
+        get("/healthz") { call.respond(mapOf("status" to "ok")) }
+        get("/readyz") {
+            val report = readiness.check()
+            val status = if (report.ready) HttpStatusCode.OK else HttpStatusCode.ServiceUnavailable
+            call.respond(status, ReadinessResponse(if (report.ready) "ready" else "not_ready", report.checks))
+        }
         identityRoutes(identity, signer)
         equipmentRoutes(equipment, identity, signer)
         importRoutes(importer, identity, signer)

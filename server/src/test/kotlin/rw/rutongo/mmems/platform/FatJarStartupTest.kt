@@ -51,39 +51,40 @@ class FatJarStartupTest {
             }.start()
 
         try {
-            awaitHealthy(process, port, log)
+            val ready = awaitReady(process, port, log)
+            assertTrue(ready.contains("\"status\":\"ready\""), "Unexpected readiness response: $ready")
             assertMigrated()
         } finally {
             stop(process)
         }
     }
 
-    private fun awaitHealthy(
+    private fun awaitReady(
         process: Process,
         port: Int,
         log: Path,
-    ) {
+    ): String {
         val client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(2)).build()
         val request =
             HttpRequest
-                .newBuilder(URI.create("http://127.0.0.1:$port/health"))
+                .newBuilder(URI.create("http://127.0.0.1:$port/readyz"))
                 .timeout(Duration.ofSeconds(2))
                 .GET()
                 .build()
         val deadline = Instant.now().plusSeconds(90)
         var lastFailure: Exception? = null
         while (Instant.now().isBefore(deadline)) {
-            check(process.isAlive) { "Fat jar exited before becoming healthy:\n${readLog(log)}" }
+            check(process.isAlive) { "Fat jar exited before becoming ready:\n${readLog(log)}" }
             try {
                 val response = client.send(request, HttpResponse.BodyHandlers.ofString())
-                if (response.statusCode() == 200) return
-                lastFailure = IllegalStateException("Health returned ${response.statusCode()}: ${response.body()}")
+                if (response.statusCode() == 200) return response.body()
+                lastFailure = IllegalStateException("Readiness returned ${response.statusCode()}: ${response.body()}")
             } catch (e: Exception) {
                 lastFailure = e
             }
             Thread.sleep(250)
         }
-        fail("Fat jar did not become healthy. Last failure: ${lastFailure?.message}\n${readLog(log)}")
+        fail("Fat jar did not become ready. Last failure: ${lastFailure?.message}\n${readLog(log)}")
     }
 
     private fun assertMigrated() {
