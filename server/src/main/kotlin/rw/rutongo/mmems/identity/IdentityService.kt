@@ -117,6 +117,7 @@ class IdentityService(
     private val signer: TokenSigner,
 ) {
     private val argon = Argon2Factory.create(Argon2Factory.Argon2Types.ARGON2id)
+    private val loginAttemptsPerMinute = System.getenv("LOGIN_RATE_LIMIT_PER_MINUTE")?.toIntOrNull()?.coerceAtLeast(1) ?: 10
 
     fun login(
         username: String,
@@ -177,7 +178,7 @@ class IdentityService(
         dataSource.connection.use { c ->
             c.prepareStatement("insert into login_rate_bucket(bucket_key,window_started_at,attempts) values (?,now(),1) on conflict(bucket_key) do update set attempts=case when login_rate_bucket.window_started_at < now()-interval '1 minute' then 1 else login_rate_bucket.attempts+1 end, window_started_at=case when login_rate_bucket.window_started_at < now()-interval '1 minute' then now() else login_rate_bucket.window_started_at end returning attempts").use { ps ->
                 ps.setString(1, key)
-                ps.executeQuery().use { rs -> rs.next() && rs.getInt(1) <= 10 }
+                ps.executeQuery().use { rs -> rs.next() && rs.getInt(1) <= loginAttemptsPerMinute }
             }
         }
 

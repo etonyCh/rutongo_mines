@@ -26,7 +26,7 @@ Start PostgreSQL, then run the server distribution once with `bootstrap-admin`, 
 
 Authentication routes are under `/api/v1/auth`. Web refresh tokens are issued as Secure, HttpOnly, SameSite=Strict cookies; refresh requests require `X-CSRF-Token` and `X-Requested-With: rutongo-mmems`. Android clients receive an opaque refresh token in the response body.
 
-FCM HTTP v1 uses the `FCM_CREDENTIALS` environment variable, which may contain the service-account JSON itself or a path to it. Set `BACKUP_VERIFICATION_MARKER` to a JSON file with `completedAt` (ISO-8601), optional `path` (relative to the marker file) and optional `sha256`; the job rejects missing, stale or checksum-mismatched backups. `BACKUP_VERIFICATION_MAX_AGE_HOURS` defaults to 48. If no marker is configured, the backup job logs a warning without failing the scheduler.
+FCM HTTP v1 uses the `FCM_CREDENTIALS` environment variable, which may contain the service-account JSON itself or a path to it. `LOGIN_RATE_LIMIT_PER_MINUTE` controls login attempts per minute for each IP and username and defaults to 10. Set `BACKUP_VERIFICATION_MARKER` to a JSON file with `completedAt` (ISO-8601), optional `path` (relative to the marker file) and optional `sha256`; the job rejects missing, stale or checksum-mismatched backups. `BACKUP_VERIFICATION_MAX_AGE_HOURS` defaults to 48. If no marker is configured, the backup job logs a warning without failing the scheduler.
 
 Administrators create import profiles at `/api/v1/import-profiles`, mapping domain fields to the actual spreadsheet headers. Upload `.xlsx` files to `/api/v1/imports` as multipart fields `profileId` and `file`; inspect `/api/v1/imports/{id}`, then commit with `applyUpdates` as needed. Preview is dry-run against business tables, unknown columns are preserved, rejected rows can be downloaded as CSV, and repeat imports classify already-applied rows as unchanged. Files are limited to 20 MiB.
 
@@ -81,5 +81,16 @@ npm run test:e2e
 ```
 
 Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to use an existing Chromium or Chrome binary. CI installs the Playwright browser, runs the suite after the Gradle build and uploads traces/screenshots when it fails.
+
+### Run the load test
+
+Build the fat jar and run the disposable k6 harness:
+
+```sh
+gradle :server:shadowJar
+ops/load/run.sh
+```
+
+It starts a temporary PostgreSQL database and API, seeds 1,000 equipment and 100 supervisors, then runs 90 read users, 10 status-writing users and a 150-equipment daily-report PDF scenario against the API. See [`ops/load/README.md`](ops/load/README.md) for thresholds, the short smoke profile and configuration. The harness raises the API login limit only inside the disposable load environment.
 
 The current HTTP contract is documented in [`docs/openapi.yaml`](docs/openapi.yaml). It covers authentication, users, organization, personnel, equipment, status, import, inspection, defect, breakdown, maintenance, working hours, parts, stock, report, photo, dashboard, notification and export endpoints, including `If-Match`, `Idempotency-Key`, error responses and SSE resumption headers. CI runs the full Gradle build, validates the contract with Redocly and publishes the generated reference and debug APK as build artifacts. CI also enforces `ktlint`, `detekt` with per-module baselines, Konsist architecture rules and Kover coverage thresholds.
