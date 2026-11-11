@@ -1,0 +1,1395 @@
+version: 1
+platforms:
+  web:
+    title: Web console
+  android:
+    title: Android app
+
+behaviors:
+  loading: a busy indicator is shown and duplicate taps are ignored while the request is in flight
+  disabled-busy: the control is disabled while its request is busy
+  validation: missing or invalid input blocks submission and shows an inline explanation
+  api-error: the server error is shown without discarding previously loaded data and retry remains available
+  empty: an explicit empty state is shown and the layout does not break
+  success: success feedback is shown and dependent data refreshes
+  site-scope: only sites assigned to the caller are visible and changing the filter never reveals another site
+  role-denied: the control is absent for roles without permission and a forged request returns 403
+  conflict: a version conflict is surfaced with a review path and no data is silently overwritten
+  offline-queue: the action is stored encrypted on the device with a stable client reference and retried without data loss
+  offline-cache: cached data remains readable with no connection and the screen states when data was last synced
+  photo-permission: camera permission denial is explained and the photo can be attached after permission is granted
+  responsive: the layout remains usable at mobile, tablet, and desktop widths without clipped primary actions
+  download: the downloaded file opens, has the expected format, and contains only authorised site data
+  session-refresh: an expired access token is refreshed once and the original request retries without losing user input
+  audit: the action is written to the immutable audit trail with actor, entity, and timestamp
+
+global_checks:
+  - id: role-matrix
+    states: [role-denied]
+    expected: Sign in as every role and confirm the visible web tabs and Android bottom tabs exactly match the role matrix. Direct navigation to an unauthorised screen or API must be denied.
+  - id: site-scope
+    states: [site-scope]
+    expected: A one-site user never sees equipment, inspections, problems, maintenance, reports, imports, exports, or audit metadata from another site. A multi-site user sees only assigned sites.
+  - id: session-expiry
+    states: [session-refresh, api-error]
+    expected: Expire the access token during a form, report action, and Android sync. The client refreshes or asks for sign-in without losing queued work or silently submitting twice.
+  - id: empty-error-states
+    states: [empty, api-error, loading]
+    expected: For every list and dashboard, verify loading, empty, and server-error states. A failed refresh keeps the previous usable view and offers retry.
+  - id: offline-work
+    states: [offline-cache, offline-queue, conflict]
+    expected: Put Android in airplane mode; open the app, start an inspection, record a status or breakdown, take a photo, and sign out only after the queue drains. No captured work may be lost.
+  - id: concurrency
+    states: [conflict]
+    expected: Use two sessions to change the same maintenance, report, or breakdown record. The stale action must return 409 or 412 and offer a re-read path, never an overwrite.
+  - id: audit-and-security
+    states: [audit, role-denied]
+    expected: Mutating actions appear in the audit trail, passwords never appear in logs or URLs, and unauthenticated requests to protected APIs return 401.
+  - id: accessibility-input
+    states: [responsive, validation]
+    expected: Complete the core workflows using keyboard only on web and TalkBack on Android. Focus order, error announcements, labels, and touch targets must remain usable.
+
+screens:
+  - id: web-login
+    platform: web
+    title: Web sign in
+    source: webApp/src/wasmJsMain/kotlin/rw/rutongo/mmems/web/ui/LoginScreen.kt
+    roles: [MECHANIC, SUPERVISOR, MANAGER, GENERAL_MANAGER, ADMINISTRATOR]
+    entry: Unauthenticated web load or expired session.
+    purpose: Authenticate a user and start a refresh-cookie session.
+    checks:
+      - id: branding
+        expected: The Rutongo brand, username and password fields, and sign-in button render without horizontal scrolling at mobile and desktop widths.
+    controls:
+      - id: username
+        type: field
+        label: Username
+        states: [validation, disabled-busy]
+        expected: Accepts the account username, trims surrounding spaces, and remains enabled for correction after a failed attempt.
+        operations: ["POST /api/v1/auth/login"]
+      - id: password
+        type: field
+        label: Password
+        states: [validation, disabled-busy]
+        expected: Masks input, supports Enter to submit, and does not retain the password after sign-out.
+        operations: ["POST /api/v1/auth/login"]
+      - id: sign-in
+        type: button
+        label: Sign in
+        states: [disabled-busy, api-error, success]
+        expected: Submits valid credentials, shows a busy state, and routes to the role's default tab on success.
+        operations: ["POST /api/v1/auth/login", "GET /api/v1/me"]
+      - id: invalid-credentials
+        type: state
+        label: Invalid credentials and lockout
+        states: [validation, api-error]
+        expected: Shows an actionable error for bad credentials or throttling and never reveals whether the username exists.
+        operations: ["POST /api/v1/auth/login"]
+
+  - id: web-change-password
+    platform: web
+    title: Web forced password change
+    source: webApp/src/wasmJsMain/kotlin/rw/rutongo/mmems/web/ui/LoginScreen.kt
+    roles: [MECHANIC, SUPERVISOR, MANAGER, GENERAL_MANAGER, ADMINISTRATOR]
+    entry: Sign-in response requires a password change.
+    purpose: Replace a temporary password before entering the application.
+    controls:
+      - id: current-password
+        type: field
+        label: Current password
+        states: [validation, disabled-busy]
+        expected: Required and checked by the server.
+        operations: ["POST /api/v1/auth/change-password"]
+      - id: new-password
+        type: field
+        label: New password
+        states: [validation, disabled-busy]
+        expected: Enforces the server password policy and rejects reuse of the current password.
+        operations: ["POST /api/v1/auth/change-password"]
+      - id: confirm-password
+        type: field
+        label: Confirm new password
+        states: [validation]
+        expected: Must match the new password before submission is allowed.
+      - id: change-password
+        type: button
+        label: Change password
+        states: [disabled-busy, api-error, success]
+        expected: Changes the password, clears the forced-change state, and allows normal navigation.
+        operations: ["POST /api/v1/auth/change-password"]
+      - id: sign-out
+        type: button
+        label: Sign out
+        states: [success]
+        expected: Revokes the session and returns to the login screen.
+        operations: ["POST /api/v1/auth/logout"]
+
+  - id: web-shell
+    platform: web
+    title: Web application shell
+    source: webApp/src/wasmJsMain/kotlin/rw/rutongo/mmems/web/ui/HomeShell.kt
+    roles: [MECHANIC, SUPERVISOR, MANAGER, GENERAL_MANAGER, ADMINISTRATOR]
+    entry: Successful sign-in or session restore.
+    purpose: Provide role-aware navigation and session controls.
+    checks:
+      - id: role-tabs
+        states: [role-denied, responsive]
+        expected: Each role sees exactly its tabs, with a navigation rail on wide screens and bottom navigation on narrow screens.
+    controls:
+      - id: session-refresh
+        type: state
+        label: Automatic session refresh
+        states: [session-refresh]
+        expected: A rejected access token triggers one refresh attempt and the original request retries; repeated failure returns to sign-in.
+        operations: ["POST /api/v1/auth/refresh"]
+      - id: current-user
+        type: display
+        label: Current user and role badge
+        expected: Shows the signed-in name and role from the profile endpoint.
+        operations: ["GET /api/v1/me"]
+      - id: selected-site
+        type: display
+        label: Active site indicator
+        states: [site-scope]
+        expected: The top bar reflects the active site filter and never shows another user's site.
+        operations: ["GET /api/v1/sites"]
+      - id: sign-out
+        type: button
+        label: Sign out
+        states: [success]
+        expected: Revokes the refresh token and returns to the login screen.
+        operations: ["POST /api/v1/auth/logout"]
+
+  - id: web-dashboard
+    platform: web
+    title: Web dashboard
+    source: webApp/src/wasmJsMain/kotlin/rw/rutongo/mmems/web/ui/screens/DashboardScreen.kt
+    roles: [MECHANIC, SUPERVISOR, MANAGER, GENERAL_MANAGER, ADMINISTRATOR]
+    entry: Default tab after sign-in for non-mechanic web roles; dashboard tab for all.
+    purpose: Show role-specific operational metrics and site comparison.
+    controls:
+      - id: refresh
+        type: button
+        label: Refresh
+        states: [disabled-busy, api-error, success]
+        expected: Reloads the role dashboard without losing the selected site.
+        operations: ["GET /api/v1/dashboard/{kind}"]
+      - id: site-filter
+        type: filter
+        label: Site filter
+        states: [site-scope, empty, role-denied]
+        expected: Appears for supervisors, managers, general managers, and administrators but not the mechanic dashboard; switches between authorised sites and updates the metric cards.
+        operations: ["GET /api/v1/sites", "GET /api/v1/dashboard/{kind}"]
+      - id: metric-cards
+        type: display
+        label: Metric cards
+        states: [loading, empty, api-error]
+        expected: Equipment, down, availability, inspections, breakdowns, maintenance, parts, reports, and inspection-rate values are labelled and consistent with the selected site.
+        operations: ["GET /api/v1/dashboard/{kind}"]
+      - id: site-comparison
+        type: display
+        label: Site comparison table
+        states: [site-scope, empty]
+        expected: Shows one row per authorised site and hides the table for the mechanic dashboard.
+        operations: ["GET /api/v1/dashboard/{kind}"]
+
+  - id: web-sites
+    platform: web
+    title: Web sites
+    source: webApp/src/wasmJsMain/kotlin/rw/rutongo/mmems/web/ui/screens/SitesScreen.kt
+    roles: [MANAGER, GENERAL_MANAGER]
+    entry: Sites tab for manager and general manager.
+    purpose: List authorised sites with roll-up metrics.
+    controls:
+      - id: refresh
+        type: button
+        label: Refresh
+        states: [disabled-busy, api-error, success]
+        expected: Reloads site cards and their comparison metrics.
+        operations: ["GET /api/v1/sites", "GET /api/v1/dashboard/{kind}"]
+      - id: site-filter
+        type: filter
+        label: Site filter
+        states: [site-scope, empty]
+        expected: Filters the card list to one site or all authorised sites.
+        operations: ["GET /api/v1/sites"]
+      - id: site-cards
+        type: display
+        label: Site cards
+        states: [loading, empty, api-error]
+        expected: Each card shows code, name, timezone, state, equipment, availability, breakdown, and missing-inspection metrics.
+        operations: ["GET /api/v1/sites", "GET /api/v1/dashboard/{kind}"]
+
+  - id: web-equipment
+    platform: web
+    title: Web equipment
+    source: webApp/src/wasmJsMain/kotlin/rw/rutongo/mmems/web/ui/screens/EquipmentScreen.kt
+    roles: [MECHANIC, MANAGER, GENERAL_MANAGER]
+    entry: Equipment tab.
+    purpose: Search the fleet register and inspect current status.
+    controls:
+      - id: refresh
+        type: button
+        label: Refresh
+        states: [disabled-busy, api-error, success]
+        expected: Reloads equipment while preserving the site filter and search text.
+        operations: ["GET /api/v1/equipment"]
+      - id: site-filter
+        type: filter
+        label: Site filter
+        states: [site-scope, empty]
+        expected: Limits visible equipment to the selected authorised site.
+        operations: ["GET /api/v1/sites", "GET /api/v1/equipment"]
+      - id: search
+        type: filter
+        label: Search asset, code, name or type
+        states: [empty]
+        expected: Filters by asset ID, equipment code, name, or type case-insensitively and shows a clear no-match state.
+      - id: equipment-list
+        type: display
+        label: Equipment list
+        states: [loading, empty, api-error]
+        expected: Shows code, asset ID, type, site, tunnel, lifecycle, operational status, and engine hours.
+        operations: ["GET /api/v1/equipment"]
+
+  - id: web-inspections
+    platform: web
+    title: Web inspection control
+    source: webApp/src/wasmJsMain/kotlin/rw/rutongo/mmems/web/ui/screens/InspectionsScreen.kt
+    roles: [SUPERVISOR]
+    entry: Inspections tab for supervisors.
+    purpose: Monitor expected, missing, and completed inspections.
+    controls:
+      - id: refresh
+        type: button
+        label: Refresh
+        states: [disabled-busy, api-error, success]
+        expected: Reloads inspection control rows for the selected site.
+        operations: ["GET /api/v1/inspections/control"]
+      - id: site-filter
+        type: filter
+        label: Site filter
+        states: [site-scope, empty]
+        expected: Shows only inspection expectations for the selected authorised site.
+        operations: ["GET /api/v1/sites", "GET /api/v1/inspections/control"]
+      - id: inspection-list
+        type: display
+        label: Inspection control list
+        states: [loading, empty, api-error]
+        expected: Shows equipment, state, site, shift, report date, window, and missing-marked timestamp.
+        operations: ["GET /api/v1/inspections/control"]
+
+  - id: web-active-problems
+    platform: web
+    title: Web active problems
+    source: webApp/src/wasmJsMain/kotlin/rw/rutongo/mmems/web/ui/screens/ActiveProblemsScreen.kt
+    roles: [SUPERVISOR]
+    entry: Active Problems tab for supervisors.
+    purpose: Review equipment currently down or under repair.
+    controls:
+      - id: refresh
+        type: button
+        label: Refresh
+        states: [disabled-busy, api-error, success]
+        expected: Reloads active problems for the selected site.
+        operations: ["GET /api/v1/active-problems"]
+      - id: site-filter
+        type: filter
+        label: Site filter
+        states: [site-scope, empty]
+        expected: Limits problems to the selected authorised site.
+        operations: ["GET /api/v1/sites", "GET /api/v1/active-problems"]
+      - id: problem-list
+        type: display
+        label: Active problem cards
+        states: [loading, empty, api-error]
+        expected: Shows equipment, status, timestamp, reporter, problem, action, parts, and remarks.
+        operations: ["GET /api/v1/active-problems", "GET /api/v1/equipment"]
+
+  - id: web-maintenance
+    platform: web
+    title: Web maintenance verification
+    source: webApp/src/wasmJsMain/kotlin/rw/rutongo/mmems/web/ui/screens/MaintenanceScreen.kt
+    roles: [SUPERVISOR]
+    entry: Maintenance tab for supervisors.
+    purpose: Review maintenance records and verify or return technician work.
+    controls:
+      - id: refresh
+        type: button
+        label: Refresh
+        states: [disabled-busy, api-error, success]
+        expected: Reloads maintenance records for the selected site.
+        operations: ["GET /api/v1/maintenance"]
+      - id: site-filter
+        type: filter
+        label: Site filter
+        states: [site-scope, empty]
+        expected: Limits records to the selected authorised site.
+        operations: ["GET /api/v1/sites", "GET /api/v1/maintenance"]
+      - id: record-list
+        type: display
+        label: Maintenance record list
+        states: [loading, empty, api-error, role-denied]
+        expected: Shows equipment, verification state, service type, time, technician, work, cause, downtime, and notes. Decision buttons appear only for supervisors and pending records.
+        operations: ["GET /api/v1/maintenance"]
+      - id: verify
+        type: button
+        label: Verify
+        states: [success, api-error]
+        expected: Opens a comment dialog, verifies the record with its current version, and removes it from the pending set.
+        operations: ["POST /api/v1/maintenance/{id}/verify"]
+      - id: reject
+        type: button
+        label: Reject
+        states: [validation, success, api-error]
+        expected: Requires a reason, rejects with the current version, and preserves the reason in the audit trail.
+        operations: ["POST /api/v1/maintenance/{id}/reject"]
+      - id: request-correction
+        type: button
+        label: Request correction
+        states: [validation, success, api-error]
+        expected: Requires a reason, requests correction with the current version, and tells the technician what to fix.
+        operations: ["POST /api/v1/maintenance/{id}/request-correction"]
+      - id: action-dialog
+        type: form
+        label: Verification comment
+        states: [validation, disabled-busy]
+        expected: Optional for verify and mandatory for reject or correction; whitespace-only input is rejected.
+        operations: ["POST /api/v1/maintenance/{id}/verify", "POST /api/v1/maintenance/{id}/reject", "POST /api/v1/maintenance/{id}/request-correction"]
+
+  - id: web-reports
+    platform: web
+    title: Web daily reports
+    source: webApp/src/wasmJsMain/kotlin/rw/rutongo/mmems/web/ui/screens/ReportsScreen.kt
+    roles: [SUPERVISOR, MANAGER, GENERAL_MANAGER]
+    entry: Reports tab or Daily report tab.
+    purpose: Prepare, submit, approve, return, and download daily site reports.
+    controls:
+      - id: refresh
+        type: button
+        label: Refresh
+        states: [disabled-busy, api-error, success]
+        expected: Reloads report versions for the selected site.
+        operations: ["GET /api/v1/reports"]
+      - id: site-filter
+        type: filter
+        label: Site filter
+        states: [site-scope, empty]
+        expected: Limits reports to the selected authorised site.
+        operations: ["GET /api/v1/sites", "GET /api/v1/reports"]
+      - id: status-filter
+        type: filter
+        label: Report status filter chips
+        states: [empty]
+        expected: Filters reports by state and shows a clear empty result when no report matches.
+        operations: ["GET /api/v1/reports"]
+      - id: prepare-report
+        type: button
+        label: Prepare report
+        states: [role-denied]
+        expected: Visible only to supervisors; managers cannot create a report from this screen.
+      - id: report-list
+        type: display
+        label: Report list
+        states: [loading, empty, api-error]
+        expected: Shows report reference, state, version, site, report date, and period.
+        operations: ["GET /api/v1/reports"]
+      - id: view-report
+        type: button
+        label: View
+        expected: Expands the selected report snapshot, metrics, narrative, and action controls.
+      - id: download-pdf
+        type: button
+        label: PDF and Download PDF
+        states: [download, api-error]
+        expected: Downloads the selected version as a PDF with the expected report reference and no other site's data.
+        operations: ["GET /api/v1/reports/{id}/pdf"]
+      - id: submit-report
+        type: button
+        label: Submit for approval
+        states: [role-denied, disabled-busy, success, api-error, conflict]
+        expected: Visible only to the supervisor who prepared a draft or returned report; submits using its current version and refreshes the report state.
+        operations: ["POST /api/v1/reports/{id}/submit"]
+      - id: approve-report
+        type: button
+        label: Approve
+        states: [role-denied, disabled-busy, validation, success, api-error]
+        expected: Visible only to managers for submitted or resubmitted reports; opens an optional comment dialog and approves using the current version.
+        operations: ["POST /api/v1/reports/{id}/approve"]
+      - id: return-report
+        type: button
+        label: Return
+        states: [role-denied, disabled-busy, validation, success, api-error]
+        expected: Visible only to managers for submitted or resubmitted reports; requires a correction reason and leaves the report editable by the supervisor.
+        operations: ["POST /api/v1/reports/{id}/return"]
+      - id: create-report-dialog
+        type: form
+        label: Prepare daily site report dialog
+        states: [validation, disabled-busy, api-error]
+        expected: Site, period, report date, executive summary, safety observations, maintenance summary, and recommendations are captured; site and date are required.
+        operations: ["POST /api/v1/reports"]
+
+  - id: web-operations
+    platform: web
+    title: Web operations
+    source: webApp/src/wasmJsMain/kotlin/rw/rutongo/mmems/web/ui/screens/OperationsScreen.kt
+    roles: [ADMINISTRATOR]
+    entry: Operations tab for administrators.
+    purpose: Preview and commit controlled workbook imports and download datasets.
+    controls:
+      - id: refresh
+        type: button
+        label: Refresh
+        states: [disabled-busy, api-error, success]
+        expected: Reloads import profiles and export datasets.
+        operations: ["GET /api/v1/import-profiles", "GET /api/v1/exports"]
+      - id: profile-picker
+        type: filter
+        label: Import profile picker
+        states: [empty, disabled-busy]
+        expected: Lists configured profiles and keeps the selected profile while the screen is open.
+        operations: ["GET /api/v1/import-profiles"]
+      - id: choose-workbook
+        type: button
+        label: Choose workbook
+        states: [disabled-busy, validation, api-error]
+        expected: Accepts only an .xlsx workbook, shows the selected file name, and surfaces rejected rows in the preview.
+        operations: ["POST /api/v1/imports"]
+      - id: preview-summary
+        type: display
+        label: Import preview summary
+        states: [loading, empty, api-error]
+        expected: Shows batch state, SHA-256 prefix, new, updated, unchanged, and rejected counts plus up to 100 preview rows.
+        operations: ["POST /api/v1/imports"]
+      - id: commit-import
+        type: button
+        label: Commit import
+        states: [disabled-busy, success, api-error]
+        expected: Commits a non-committed preview once and changes the state to committed without duplicating rows.
+        operations: ["POST /api/v1/imports/{id}/commit"]
+      - id: clear-preview
+        type: button
+        label: Clear preview
+        states: [disabled-busy]
+        expected: Clears the local preview without changing server data.
+      - id: export-list
+        type: display
+        label: Dataset exports
+        states: [loading, empty, api-error]
+        expected: Lists only datasets allowed for the administrator role with their available formats.
+        operations: ["GET /api/v1/exports"]
+      - id: download-export
+        type: action
+        label: XLSX and CSV download buttons
+        states: [download, api-error]
+        expected: Downloads the selected dataset in the selected format and respects the active site scope.
+        operations: ["GET /api/v1/exports/{file}"]
+
+  - id: web-people
+    platform: web
+    title: Web people and audit
+    source: webApp/src/wasmJsMain/kotlin/rw/rutongo/mmems/web/ui/screens/PeopleScreen.kt
+    roles: [ADMINISTRATOR]
+    entry: People tab for administrators.
+    purpose: Administer users and inspect the immutable audit trail.
+    controls:
+      - id: refresh
+        type: button
+        label: Refresh
+        states: [disabled-busy, api-error, success]
+        expected: Reloads the active section, users, or audit events.
+        operations: ["GET /api/v1/users", "GET /api/v1/audit-events"]
+      - id: section-filter
+        type: filter
+        label: Users and Audit trail chips
+        states: [empty]
+        expected: Switches sections without losing loaded data and shows each empty state.
+        operations: ["GET /api/v1/users", "GET /api/v1/audit-events"]
+      - id: new-user
+        type: button
+        label: New user
+        states: [role-denied]
+        expected: Visible only in the Users section and only to administrators.
+      - id: user-list
+        type: display
+        label: User list
+        states: [loading, empty, api-error]
+        expected: Shows name, active state, role, username, employee ID, and site restriction.
+        operations: ["GET /api/v1/users"]
+      - id: activate-deactivate
+        type: button
+        label: Activate or Deactivate
+        states: [success, api-error, audit]
+        expected: Toggles the user's active state, refreshes the list, and writes an audit event.
+        operations: ["PATCH /api/v1/users/{id}/active"]
+      - id: create-user-dialog
+        type: form
+        label: Create user dialog
+        states: [validation, disabled-busy, api-error, success]
+        expected: Captures username, full name, employee ID, role, initial password, and site access; duplicate usernames are rejected.
+        operations: ["POST /api/v1/users", "GET /api/v1/sites"]
+      - id: audit-list
+        type: display
+        label: Audit trail list
+        states: [loading, empty, api-error, audit]
+        expected: Shows action, timestamp, entity, actor, metadata, and event hash newest first.
+        operations: ["GET /api/v1/audit-events"]
+
+  - id: web-configuration
+    platform: web
+    title: Web configuration
+    source: webApp/src/wasmJsMain/kotlin/rw/rutongo/mmems/web/ui/screens/ConfigurationScreen.kt
+    roles: [ADMINISTRATOR]
+    entry: Configuration tab for administrators.
+    purpose: Configure notification routing and review service-due monitoring.
+    controls:
+      - id: refresh
+        type: button
+        label: Refresh
+        states: [disabled-busy, api-error, success]
+        expected: Reloads notification rules.
+        operations: ["GET /api/v1/notification-rules"]
+      - id: service-monitoring
+        type: display
+        label: Service-due monitoring information
+        states: [empty]
+        expected: Explains the hourly service scan and per-minute outbox dispatcher without offering an unsupported edit action.
+      - id: notification-rule-list
+        type: display
+        label: Notification rule cards
+        states: [loading, empty, api-error]
+        expected: Shows rule type, channel, site scope, roles, enabled state, and toggle.
+        operations: ["GET /api/v1/notification-rules"]
+      - id: rule-toggle
+        type: action
+        label: Enable or disable notification rule
+        states: [disabled-busy, success, api-error, audit]
+        expected: Persists the opposite enabled state for the selected type and reflects the server response.
+        operations: ["PUT /api/v1/notification-rules/{type}"]
+
+  - id: web-more
+    platform: web
+    title: Web more
+    source: webApp/src/wasmJsMain/kotlin/rw/rutongo/mmems/web/ui/screens/MoreScreen.kt
+    roles: [MECHANIC, SUPERVISOR, MANAGER, GENERAL_MANAGER, ADMINISTRATOR]
+    entry: More tab.
+    purpose: Review account information and perform account actions.
+    controls:
+      - id: refresh
+        type: button
+        label: Refresh
+        states: [disabled-busy, api-error, success]
+        expected: Reloads the current profile and site names.
+        operations: ["GET /api/v1/me", "GET /api/v1/sites"]
+      - id: account-summary
+        type: display
+        label: Account summary
+        expected: Shows name, username, role, active state, employee ID, and assigned sites or all authorised sites.
+        operations: ["GET /api/v1/me"]
+      - id: change-password
+        type: button
+        label: Change password
+        states: [disabled-busy]
+        expected: Opens the current, new, and confirm password dialog.
+      - id: change-password-dialog
+        type: form
+        label: Change password dialog
+        states: [validation, disabled-busy, success, api-error]
+        expected: Captures current password, new password, and confirmation; mismatched confirmation or policy failure is shown inline without signing the user out.
+        operations: ["POST /api/v1/auth/change-password"]
+      - id: sign-out
+        type: button
+        label: Sign out
+        states: [success]
+        expected: Revokes the session and returns to the login screen.
+        operations: ["POST /api/v1/auth/logout"]
+      - id: application-info
+        type: display
+        label: Application information
+        expected: States that the web client is online only, shows the API endpoint, and explains the refresh-cookie session.
+        operations: ["GET /api/v1/me"]
+
+  - id: android-login
+    platform: android
+    title: Android sign in and server settings
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/LoginScreen.kt
+    roles: [MECHANIC, SUPERVISOR, MANAGER, GENERAL_MANAGER, ADMINISTRATOR]
+    entry: First launch, signed-out state, or expired refresh token.
+    purpose: Authenticate, configure a reachable server, and restore a session.
+    checks:
+      - id: saved-session
+        states: [offline-cache, session-refresh]
+        expected: A valid saved session opens the app without prompting for credentials; an expired session prompts once and preserves queued work.
+    controls:
+      - id: username
+        type: field
+        label: Username
+        states: [validation, disabled-busy]
+        expected: Accepts the account username and trims surrounding spaces.
+        operations: ["POST /api/v1/auth/login"]
+      - id: password
+        type: field
+        label: Password
+        states: [validation, disabled-busy]
+        expected: Masks input unless show password is enabled and clears on sign-out.
+        operations: ["POST /api/v1/auth/login"]
+      - id: show-password
+        type: action
+        label: Show or hide password
+        states: [validation]
+        expected: Toggles only the local field presentation and does not change submitted credentials.
+      - id: server-setting-toggle
+        type: action
+        label: Server setting
+        expected: Reveals or hides the server URL field without clearing its current value.
+      - id: server-settings
+        type: field
+        label: Server URL
+        states: [validation, api-error]
+        expected: Accepts a reachable HTTP or HTTPS API base URL, rejects malformed values, and uses it for sign-in.
+      - id: sign-in
+        type: button
+        label: Sign in
+        states: [disabled-busy, api-error, success]
+        expected: Signs in, stores the session securely, and lands on the role's default Android tab.
+        operations: ["POST /api/v1/auth/login", "GET /api/v1/me"]
+      - id: invalid-credentials
+        type: state
+        label: Invalid credentials and offline error
+        states: [validation, api-error, offline-cache]
+        expected: Distinguishes rejected credentials from an unreachable server and offers retry without discarding the server URL.
+
+  - id: android-home
+    platform: android
+    title: Android home
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/screens/HomeScreen.kt
+    roles: [MECHANIC]
+    entry: Default tab for mechanics.
+    purpose: Start an inspection or open the mechanic's current work.
+    controls:
+      - id: open-equipment
+        type: navigation
+        label: Open equipment
+        expected: Opens the equipment tab and retains the current site scope.
+      - id: open-breakdowns
+        type: navigation
+        label: Open breakdowns
+        expected: Opens the breakdown list with cached data visible while refreshing.
+      - id: my-inspections
+        type: navigation
+        label: My inspections
+        states: [offline-cache, empty]
+        expected: Opens the inspection list and retains locally queued inspections.
+      - id: sync-now
+        type: button
+        label: Sync now
+        states: [disabled-busy, offline-cache, api-error, success]
+        expected: Refreshes cached reads and drains the outbox with a visible result.
+        operations: ["GET /api/v1/sites", "GET /api/v1/equipment", "GET /api/v1/breakdowns", "GET /api/v1/inspections/expected", "GET /api/v1/maintenance"]
+
+  - id: android-dashboard
+    platform: android
+    title: Android dashboard
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/screens/DashboardScreen.kt
+    roles: [SUPERVISOR, MANAGER, GENERAL_MANAGER, ADMINISTRATOR]
+    entry: Default tab for non-mechanic roles when available.
+    purpose: Show a cached site snapshot while the full management dashboard remains web-only.
+    controls:
+      - id: metric-cards
+        type: display
+        label: Cached site metrics
+        states: [empty, offline-cache]
+        expected: Shows open inspections, down equipment, under-repair equipment, and total equipment from the site-scoped offline cache and states that the full dashboard is web-only.
+
+  - id: android-inspections
+    platform: android
+    title: Android inspections
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/screens/InspectionsScreen.kt
+    roles: [MECHANIC, SUPERVISOR]
+    entry: Inspections tab or home shortcut.
+    purpose: Review expected inspections, local drafts, and queued submissions from the offline cache.
+    controls:
+      - id: inspection-list
+        type: display
+        label: Inspection list
+        states: [loading, empty, offline-cache, api-error]
+        expected: Shows drafts, waiting-to-sync items, and open expectations with equipment, report date, shift, due window, and local queue state.
+      - id: resume-draft
+        type: navigation
+        label: Resume draft
+        states: [offline-cache]
+        expected: Reopens the saved inspection draft at its last completed step without losing answers or photos.
+      - id: start-inspection
+        type: navigation
+        label: Start inspection
+        states: [offline-cache]
+        expected: Opens the wizard with the selected expected inspection prefilled.
+
+  - id: android-equipment
+    platform: android
+    title: Android equipment
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/screens/EquipmentScreen.kt
+    roles: [MECHANIC, MANAGER, GENERAL_MANAGER]
+    entry: Equipment tab.
+    purpose: Find a cached asset and open its current status while offline.
+    controls:
+      - id: search
+        type: filter
+        label: Search equipment or site
+        states: [empty, offline-cache]
+        expected: Filters the cached list by name, code, or site case-insensitively and shows a no-match state.
+      - id: equipment-list
+        type: display
+        label: Equipment list
+        states: [empty, offline-cache]
+        expected: Shows name, code, type, site, version, lifecycle, status, and engine hours from the offline cache.
+      - id: open-status
+        type: navigation
+        label: Open status update
+        expected: Opens the status update screen for the selected equipment.
+
+  - id: android-status
+    platform: android
+    title: Android status update
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/screens/StatusUpdateScreen.kt
+    roles: [MECHANIC, MANAGER, GENERAL_MANAGER]
+    entry: Equipment list selection.
+    purpose: Record an equipment operational status change, including offline.
+    controls:
+      - id: current-status
+        type: display
+        label: Current equipment status
+        states: [offline-cache]
+        expected: Shows equipment name, code, site, version, and the last known operational status from the offline cache.
+      - id: report-breakdown
+        type: navigation
+        label: Report breakdown
+        states: [offline-cache]
+        expected: Opens the breakdown report form for the current equipment without losing the status form.
+      - id: status
+        type: filter
+        label: New status
+        states: [validation]
+        expected: Offers OPERATIONAL, UNDER_REPAIR, and DOWN and requires a selection before submission.
+      - id: problem
+        type: field
+        label: Problem
+        states: [validation]
+        expected: Required when the new status is not OPERATIONAL and rejects whitespace-only input.
+        operations: ["POST /api/v1/equipment/{id}/status"]
+      - id: action
+        type: field
+        label: Action taken
+        expected: Captures the immediate action taken for a non-operational status.
+        operations: ["POST /api/v1/equipment/{id}/status"]
+      - id: parts
+        type: field
+        label: Parts required
+        expected: Captures free-text parts required for the repair.
+        operations: ["POST /api/v1/equipment/{id}/status"]
+      - id: remarks
+        type: field
+        label: Remarks
+        expected: Captures optional additional context for the status change.
+        operations: ["POST /api/v1/equipment/{id}/status"]
+      - id: override-reason
+        type: field
+        label: Override reason
+        states: [validation]
+        expected: Captures a reason only when contradicting an automatic safety rule and preserves it with the queued operation.
+        operations: ["POST /api/v1/equipment/{id}/status"]
+      - id: submit
+        type: button
+        label: Submit status
+        states: [disabled-busy, offline-queue, success, api-error, conflict]
+        expected: Submits online or queues with a stable client reference offline; a stale version is surfaced rather than overwritten.
+        operations: ["POST /api/v1/equipment/{id}/status"]
+
+  - id: android-tasks
+    platform: android
+    title: Android tasks
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/screens/TasksScreen.kt
+    roles: [MECHANIC]
+    entry: Tasks tab.
+    purpose: Show locally saved inspection drafts and queued field operations.
+    checks:
+      - id: task-sections
+        states: [empty, offline-cache]
+        expected: Draft and queued-operation cards remain readable on a phone and distinguish an empty queue from pending work.
+    controls:
+      - id: task-list
+        type: display
+        label: Drafts and queued operations
+        states: [empty, offline-cache]
+        expected: Shows draft equipment and last saved step plus queued operation kind, client reference, and state from local storage.
+
+  - id: android-breakdowns
+    platform: android
+    title: Android breakdowns
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/screens/BreakdownsScreen.kt
+    roles: [MECHANIC, SUPERVISOR]
+    entry: Problems tab.
+    purpose: Review cached breakdown records and open details or the report form.
+    controls:
+      - id: metric-tiles
+        type: display
+        label: Active and awaiting-parts counts
+        states: [empty, offline-cache]
+        expected: Shows active and awaiting-parts totals from the offline cache.
+      - id: breakdown-list
+        type: display
+        label: Breakdown list
+        states: [empty, offline-cache]
+        expected: Shows equipment, category, state, problem, started timestamp, and local queue state from the offline cache.
+      - id: report-breakdown
+        type: navigation
+        label: Report breakdown
+        states: [offline-cache]
+        expected: Opens the breakdown report form without requiring connectivity.
+      - id: open-breakdown
+        type: navigation
+        label: Open breakdown detail
+        expected: Opens the selected breakdown detail and transition actions.
+
+  - id: android-breakdown-report
+    platform: android
+    title: Android breakdown report
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/screens/BreakdownReportScreen.kt
+    roles: [MECHANIC, SUPERVISOR]
+    entry: Report breakdown action.
+    purpose: Capture a new breakdown and queue it for offline submission.
+    controls:
+      - id: equipment-search
+        type: filter
+        label: Search equipment or site
+        states: [empty, offline-cache]
+        expected: Filters cached equipment by name, code, or site and shows a no-match state.
+      - id: equipment
+        type: filter
+        label: Equipment
+        states: [validation, offline-cache]
+        expected: Selects an authorised equipment item from cached data and requires a selection.
+      - id: active-breakdown
+        type: navigation
+        label: Open active breakdown
+        states: [conflict]
+        expected: When an active breakdown already exists, links to it and blocks creation of a duplicate.
+      - id: category
+        type: filter
+        label: Breakdown category
+        states: [validation]
+        expected: Requires one of the supported categories and preserves the selected category in the queued report.
+        operations: ["POST /api/v1/breakdowns"]
+      - id: problem
+        type: field
+        label: Problem
+        states: [validation]
+        expected: Required description that is not whitespace-only.
+        operations: ["POST /api/v1/breakdowns"]
+      - id: action-taken
+        type: field
+        label: Immediate action
+        expected: Captures the immediate action taken and remains optional.
+        operations: ["POST /api/v1/breakdowns"]
+      - id: parts-used
+        type: field
+        label: Parts required
+        expected: Captures free-text parts information without an unsupported stock deduction.
+        operations: ["POST /api/v1/breakdowns"]
+      - id: remarks
+        type: field
+        label: Remarks
+        expected: Captures optional additional context.
+        operations: ["POST /api/v1/breakdowns"]
+      - id: submit
+        type: button
+        label: Submit breakdown
+        states: [disabled-busy, offline-queue, success, api-error]
+        expected: Submits online or queues atomically with a stable client reference; retries never create duplicates.
+        operations: ["POST /api/v1/breakdowns"]
+
+  - id: android-breakdown-detail
+    platform: android
+    title: Android breakdown detail
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/screens/BreakdownDetailScreen.kt
+    roles: [MECHANIC, SUPERVISOR]
+    entry: Breakdown list selection.
+    purpose: Review a breakdown and apply an allowed state transition.
+    controls:
+      - id: breakdown-summary
+        type: display
+        label: Breakdown summary
+        states: [empty, offline-cache, api-error]
+        expected: Shows equipment, status, timestamps, problem, action, parts, and remarks from the offline cache or the server.
+      - id: transition
+        type: filter
+        label: Next repair state
+        states: [validation]
+        expected: Offers only transitions allowed from the current state and disables submission until one is selected.
+        operations: ["POST /api/v1/breakdowns/{id}/transition"]
+      - id: action-taken
+        type: field
+        label: Action taken
+        expected: Captures the repair action taken for the transition.
+        operations: ["POST /api/v1/breakdowns/{id}/transition"]
+      - id: parts-required
+        type: field
+        label: Parts required
+        expected: Captures the parts required for the repair.
+        operations: ["POST /api/v1/breakdowns/{id}/transition"]
+      - id: remarks
+        type: field
+        label: Remarks
+        expected: Captures optional additional repair context.
+        operations: ["POST /api/v1/breakdowns/{id}/transition"]
+      - id: submit-transition
+        type: button
+        label: Apply transition
+        states: [disabled-busy, offline-queue, success, api-error, conflict]
+        expected: Queues offline or submits online, preserves the client reference, and surfaces a version conflict for review.
+        operations: ["POST /api/v1/breakdowns/{id}/transition"]
+
+  - id: android-maintenance
+    platform: android
+    title: Android maintenance
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/screens/MaintenanceScreen.kt
+    roles: [MECHANIC, SUPERVISOR, MANAGER, GENERAL_MANAGER]
+    entry: Maintenance tab.
+    purpose: Capture maintenance work and supervisors' verification decisions, including offline.
+    checks:
+      - id: role-actions
+        states: [role-denied, offline-cache]
+        expected: Mechanics capture records while verification actions appear only when the role and cached state allow them.
+    controls:
+      - id: refresh
+        type: button
+        label: Refresh
+        states: [disabled-busy, offline-cache, api-error, success]
+        expected: Refreshes records, technicians, service types, schedule, and working hours while retaining queued records.
+        operations: ["GET /api/v1/maintenance", "GET /api/v1/maintenance-technicians", "GET /api/v1/service-types", "GET /api/v1/service-schedule", "GET /api/v1/working-hours"]
+      - id: tabs
+        type: filter
+        label: Schedule, Records and Hours tabs
+        states: [empty, offline-cache]
+        expected: Switches between schedule, records, and hours without losing cached data or the selected tab state.
+      - id: metric-tiles
+        type: display
+        label: Schedule, pending and queued tiles
+        states: [empty, offline-cache]
+        expected: Shows schedule count, pending verification count, and queued record count from the offline cache.
+      - id: record-service
+        type: button
+        label: Record service and close form
+        states: [role-denied, offline-cache]
+        expected: Opens and closes the maintenance capture form only for roles allowed to record service.
+      - id: record-list
+        type: display
+        label: Maintenance record list
+        states: [empty, offline-cache]
+        expected: Shows equipment, service type, work, technician, parts, downtime, state, and local queue state from the offline cache.
+      - id: schedule-list
+        type: display
+        label: Service schedule list
+        states: [empty, offline-cache]
+        expected: Shows equipment, service type, interval hours, status, last verified, next due, remaining hours, and current hours from the offline cache.
+      - id: hours-summary
+        type: display
+        label: Working-hours summary and groups
+        states: [empty, offline-cache]
+        expected: Shows total recorded hours, groups, overlap warnings, and missing-reading warnings from the offline cache.
+      - id: equipment
+        type: filter
+        label: Equipment
+        states: [validation, offline-cache]
+        expected: Selects authorised equipment from cached data and requires a selection.
+        operations: ["POST /api/v1/maintenance"]
+      - id: service-type
+        type: filter
+        label: Service type
+        states: [validation, offline-cache, empty]
+        expected: Lists cached service types and requires a selection.
+        operations: ["GET /api/v1/service-types", "POST /api/v1/maintenance"]
+      - id: technician
+        type: filter
+        label: Technician
+        states: [validation, offline-cache, empty]
+        expected: Lists cached technicians eligible for the site and requires a selection where the contract requires one.
+        operations: ["GET /api/v1/maintenance-technicians", "POST /api/v1/maintenance"]
+      - id: work-performed
+        type: field
+        label: Work performed
+        states: [validation]
+        expected: Required description that is not whitespace-only.
+        operations: ["POST /api/v1/maintenance"]
+      - id: cause
+        type: field
+        label: Cause
+        expected: Captures the optional cause and preserves it with the queued or submitted record.
+        operations: ["POST /api/v1/maintenance"]
+      - id: engine-hours
+        type: field
+        label: Engine hours
+        states: [validation]
+        expected: Accepts an optional numeric engine-hour reading and rejects non-numeric input.
+        operations: ["POST /api/v1/maintenance"]
+      - id: notes
+        type: field
+        label: Notes
+        expected: Captures optional free-text notes and preserves them with the queued or submitted record.
+        operations: ["POST /api/v1/maintenance"]
+      - id: submit-record
+        type: button
+        label: Save maintenance record
+        states: [disabled-busy, offline-queue, success, api-error, conflict]
+        expected: Saves online or queues with a stable client reference and never duplicates on retry.
+        operations: ["POST /api/v1/maintenance"]
+      - id: verify
+        type: button
+        label: Verify
+        states: [role-denied, disabled-busy, offline-queue, success, api-error, conflict]
+        expected: Requires an allowed supervisor or manager state and records the verification.
+        operations: ["POST /api/v1/maintenance/{id}/verify"]
+      - id: reject
+        type: button
+        label: Reject
+        states: [role-denied, validation, offline-queue, success, api-error, conflict]
+        expected: Requires a reason and records the rejection without overwriting newer work.
+        operations: ["POST /api/v1/maintenance/{id}/reject"]
+      - id: request-correction
+        type: button
+        label: Request correction
+        states: [role-denied, validation, offline-queue, success, api-error, conflict]
+        expected: Requires a reason, records the correction request, and queues safely offline.
+        operations: ["POST /api/v1/maintenance/{id}/request-correction"]
+
+  - id: android-more
+    platform: android
+    title: Android more and synchronisation
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/screens/MoreScreen.kt
+    roles: [MECHANIC, SUPERVISOR, MANAGER, GENERAL_MANAGER, ADMINISTRATOR]
+    entry: More tab.
+    purpose: Show account details, sync status, and local application controls.
+    controls:
+      - id: account-summary
+        type: display
+        label: Account summary
+        states: [offline-cache]
+        expected: Shows the signed-in name, employee ID, role, and number of site assignments from the saved session.
+        operations: ["GET /api/v1/me"]
+      - id: sync-now
+        type: button
+        label: Sync now
+        states: [disabled-busy, offline-cache, offline-queue, api-error, success]
+        expected: Refreshes every cached read and drains queued writes, photos, and status changes in a safe order with a per-item result.
+        operations: ["GET /api/v1/sites", "GET /api/v1/equipment", "GET /api/v1/shifts", "GET /api/v1/checklist-items", "GET /api/v1/inspections/expected", "GET /api/v1/breakdowns", "GET /api/v1/service-types", "GET /api/v1/maintenance-technicians", "GET /api/v1/maintenance", "GET /api/v1/service-schedule", "GET /api/v1/working-hours"]
+      - id: sync-status
+        type: display
+        label: Queue and last-sync status
+        states: [offline-cache, offline-queue, api-error]
+        expected: Shows pending operation and photo counts plus the last successful reference sync timestamp.
+      - id: re-read-equipment
+        type: button
+        label: Re-read equipment
+        states: [conflict]
+        expected: For a conflicted status operation, discards the queued attempt and opens the current equipment state for a fresh decision.
+      - id: re-read-breakdown
+        type: button
+        label: Re-read breakdown
+        states: [conflict]
+        expected: For a conflicted breakdown transition, discards the queued attempt and opens the current server breakdown for review.
+      - id: discard-failed-operation
+        type: button
+        label: Discard
+        states: [validation, offline-queue]
+        expected: Discards only the selected failed operation after explicit user action; nothing is discarded automatically.
+      - id: server-url
+        type: field
+        label: Server URL
+        states: [validation]
+        expected: Shows the current API base URL and accepts a corrected HTTP or HTTPS endpoint.
+      - id: save-server-url
+        type: button
+        label: Save server URL
+        states: [success, validation]
+        expected: Persists the corrected server URL for future sync attempts without clearing local work.
+      - id: sign-out
+        type: action
+        label: Sign out
+        states: [offline-queue, validation]
+        expected: Opens a confirmation that warns when unsent work remains and signs out locally only after the user confirms.
+
+  - id: android-inspection-wizard
+    platform: android
+    title: Android inspection wizard
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/wizard/InspectionWizardScreen.kt
+    roles: [MECHANIC, SUPERVISOR]
+    entry: Start inspection from home or the inspection list.
+    purpose: Complete the nine-step inspection offline and queue it for submission.
+    checks:
+      - id: step-navigation
+        states: [validation, offline-cache, responsive]
+        expected: All nine steps remain reachable, the progress indicator advances correctly, and invalid required fields block forward navigation.
+    controls:
+      - id: context-step
+        type: form
+        label: Context step
+        states: [validation, offline-cache, empty]
+        expected: Captures equipment, site, tunnel, report date, shift, and inspection context from cached data and requires the mandatory selections.
+        operations: ["GET /api/v1/equipment", "GET /api/v1/shifts"]
+      - id: start-hours-step
+        type: form
+        label: Start hours step
+        states: [validation, offline-cache]
+        expected: Captures the starting engine-hour reading and rejects missing or non-numeric values where required.
+      - id: safety-checklist-step
+        type: form
+        label: Safety checklist step
+        states: [validation, empty, offline-cache]
+        expected: Loads cached safety checklist items, records each result, requires notes for failures, and preserves answers when navigating back.
+        operations: ["GET /api/v1/checklist-items"]
+      - id: mechanical-checklist-step
+        type: form
+        label: Mechanical checklist step
+        states: [validation, empty, offline-cache]
+        expected: Loads cached mechanical checklist items, records each result, requires notes for failures, and preserves answers when navigating back.
+        operations: ["GET /api/v1/checklist-items"]
+      - id: defects-step
+        type: form
+        label: Defects step
+        states: [validation, offline-cache]
+        expected: Captures defect entries and severity and preserves them in the local draft and queued inspection.
+        operations: ["POST /api/v1/inspections"]
+      - id: photo-step
+        type: form
+        label: Photo evidence step
+        states: [photo-permission, offline-cache]
+        expected: Captures photo evidence for checklist items, keeps files after process death, and explains camera permission denial.
+        operations: ["POST /api/v1/photos"]
+      - id: end-hours-step
+        type: form
+        label: End hours step
+        states: [validation, offline-cache]
+        expected: Captures the ending engine-hour reading and rejects values lower than the start hours.
+      - id: review-step
+        type: form
+        label: Review step
+        states: [validation]
+        expected: Shows every captured answer and blocks submission when required data is missing.
+      - id: sign-step
+        type: form
+        label: Sign and submit step
+        states: [validation, offline-queue]
+        expected: Captures the signer confirmation and queues the complete inspection only when all required steps are valid.
+      - id: back
+        type: navigation
+        label: Back
+        states: [validation]
+        expected: Preserves entered data or asks before discarding an unsaved draft.
+      - id: next
+        type: button
+        label: Next
+        states: [validation, disabled-busy]
+        expected: Validates the current step and advances without duplicating submissions.
+      - id: submit
+        type: button
+        label: Submit inspection
+        states: [disabled-busy, offline-queue, success, api-error]
+        expected: Queues the inspection and its photos atomically with a stable client reference; retries never create duplicates.
+        operations: ["POST /api/v1/inspections", "POST /api/v1/photos"]
+
+  - id: android-camera
+    platform: android
+    title: Android camera capture
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/camera/CameraCaptureScreen.kt
+    roles: [MECHANIC, SUPERVISOR]
+    entry: Attach photo from the inspection checklist step.
+    purpose: Capture photo evidence and return the compressed file to the inspection wizard.
+    checks:
+      - id: permission
+        states: [photo-permission, api-error]
+        expected: A denied camera permission is explained, the app does not crash, and the grant-permission action remains available.
+    controls:
+      - id: preview
+        type: display
+        label: Camera preview
+        states: [photo-permission]
+        expected: Shows a correctly oriented full-screen preview after permission is granted.
+      - id: grant-permission
+        type: button
+        label: Grant permission
+        states: [photo-permission]
+        expected: Requests camera permission and shows the preview after approval without losing the document name.
+      - id: capture
+        type: button
+        label: Capture photo
+        states: [disabled-busy, api-error]
+        expected: Captures and compresses one photo per tap and returns a stable local URI to the originating checklist item.
+      - id: close
+        type: button
+        label: Close camera
+        states: [offline-queue]
+        expected: Closes the camera without discarding photos already returned to the draft.
+
+deferred:
+  - id: android-report-placeholder
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/MainScaffold.kt
+    roles: [SUPERVISOR]
+    reason: The Report navigation destination is an intentional placeholder in the current Android release; verify explanatory text and that no broken action is offered.
+  - id: android-sites-placeholder
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/MainScaffold.kt
+    roles: [MANAGER, GENERAL_MANAGER]
+    reason: The Sites navigation destination is an intentional placeholder in the current Android release; verify explanatory text and that no broken action is offered.
+  - id: android-reports-placeholder
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/MainScaffold.kt
+    roles: [MANAGER, GENERAL_MANAGER]
+    reason: Daily reports remain web-only; the Android destination is an intentional placeholder and must not imply report creation is available.
+  - id: android-operations-placeholder
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/MainScaffold.kt
+    roles: [ADMINISTRATOR]
+    reason: Imports, exports, notification rules, and user administration remain web-only; the Android destination is an intentional placeholder.
+  - id: android-people-placeholder
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/MainScaffold.kt
+    roles: [ADMINISTRATOR]
+    reason: People and audit administration remain web-only; the Android destination is an intentional placeholder.
+  - id: android-configuration-placeholder
+    source: androidApp/src/main/kotlin/rw/rutongo/mmems/android/ui/MainScaffold.kt
+    roles: [ADMINISTRATOR]
+    reason: Notification configuration remains web-only; the Android destination is an intentional placeholder.
+
+backend_only:
+  - operation: GET /health
+    reason: Readiness and observability probe; no product control is expected.
+  - operation: PUT /api/v1/users/{id}
+    reason: User profile editing has no current web or Android control.
+  - operation: POST /api/v1/sites
+    reason: Site administration is outside the current web slice.
+  - operation: PUT /api/v1/sites/{id}
+    reason: Site administration is outside the current web slice.
+  - operation: GET /api/v1/tunnels
+    reason: Tunnel administration has no current UI; tunnel names appear through site and equipment data.
+  - operation: POST /api/v1/tunnels
+    reason: Tunnel administration is outside the current web slice.
+  - operation: PUT /api/v1/tunnels/{id}
+    reason: Tunnel administration is outside the current web slice.
+  - operation: PUT /api/v1/shifts/{code}
+    reason: Shift administration is outside the current clients; Android only reads shift definitions.
+  - operation: GET /api/v1/shifts/schedules
+    reason: Shift schedule administration has no current UI; Android reads only shift definitions.
+  - operation: POST /api/v1/shifts/schedules
+    reason: Shift schedule administration is outside the current web slice.
+  - operation: GET /api/v1/equipment-types
+    reason: Equipment type administration has no current UI.
+  - operation: POST /api/v1/equipment-types
+    reason: Equipment type administration is outside the current web slice.
+  - operation: GET /api/v1/technicians
+    reason: Technician administration has no current UI; Android uses the maintenance technician projection.
+  - operation: POST /api/v1/technicians
+    reason: Technician administration is outside the current web slice.
+  - operation: PUT /api/v1/technicians/{id}
+    reason: Technician administration is outside the current web slice.
+  - operation: GET /api/v1/operators
+    reason: Operator administration has no current UI.
+  - operation: POST /api/v1/operators
+    reason: Operator administration is outside the current web slice.
+  - operation: PUT /api/v1/operators/{id}
+    reason: Operator administration is outside the current web slice.
+  - operation: GET /api/v1/assignments
+    reason: Equipment assignment history has no current web or Android control.
+  - operation: POST /api/v1/assignments
+    reason: Equipment assignment is outside the current clients; status and transfer data remain read-only.
+  - operation: GET /api/v1/transfers
+    reason: Transfer history has no current web or Android control.
+  - operation: POST /api/v1/transfers
+    reason: Transfer creation is outside the current clients.
+  - operation: POST /api/v1/equipment
+    reason: Equipment registration is outside the current web slice.
+  - operation: GET /api/v1/equipment/{id}
+    reason: Equipment detail is read from list and status payloads; no direct detail control exists.
+  - operation: PUT /api/v1/equipment/{id}
+    reason: Equipment master-data editing is outside the current web slice.
+  - operation: POST /api/v1/equipment/{id}/move
+    reason: Equipment movement is outside the current clients.
+  - operation: GET /api/v1/equipment/{id}/status-events
+    reason: Equipment status history has no current UI.
+  - operation: GET /api/v1/events
+    reason: The server-sent event stream is not consumed by the current web or Android clients.
+  - operation: POST /api/v1/import-profiles
+    reason: Import profile administration has no current web control.
+  - operation: GET /api/v1/imports/{id}
+    reason: Full preview paging is not exposed; the create response supplies the reviewed preview.
+  - operation: GET /api/v1/imports/{id}/rejections.csv
+    reason: Rejection download is API-only; the preview shows up to 100 rejected rows.
+  - operation: GET /api/v1/inspections/{id}
+    reason: Inspection detail is read from list and sync payloads; no direct detail control exists.
+  - operation: GET /api/v1/photos/{id}
+    reason: A dedicated photo viewer is not available in the current clients.
+  - operation: PUT /api/v1/inspection-drafts/{equipmentId}
+    reason: Android stores inspection drafts locally; server draft persistence has no current UI.
+  - operation: POST /api/v1/checklist-items
+    reason: Checklist administration has no current web slice.
+  - operation: PUT /api/v1/checklist-items/{id}
+    reason: Checklist administration has no current web slice.
+  - operation: POST /api/v1/inspections/{id}/corrections
+    reason: Inspection correction workflow has no current UI.
+  - operation: POST /api/v1/corrections/{id}/decision
+    reason: Inspection correction decision workflow has no current UI.
+  - operation: GET /api/v1/defects
+    reason: Defect management has no current web or Android control.
+  - operation: PATCH /api/v1/defects/{id}
+    reason: Defect management has no current web or Android control.
+  - operation: GET /api/v1/equipment/{id}/service-status
+    reason: Per-equipment service status is not displayed by the current clients.
+  - operation: POST /api/v1/service-types
+    reason: Service type administration has no current UI.
+  - operation: PUT /api/v1/service-types/{id}
+    reason: Service type administration has no current UI.
+  - operation: GET /api/v1/service-intervals
+    reason: Service interval administration has no current UI.
+  - operation: POST /api/v1/service-intervals
+    reason: Service interval administration has no current UI.
+  - operation: PUT /api/v1/service-intervals/{id}
+    reason: Service interval administration has no current UI.
+  - operation: GET /api/v1/parts
+    reason: Parts and stock management is outside the current UI.
+  - operation: POST /api/v1/parts
+    reason: Parts administration is outside the current UI.
+  - operation: GET /api/v1/parts/low-stock
+    reason: Low-stock reporting is outside the current UI.
+  - operation: GET /api/v1/parts/{id}
+    reason: Part detail is outside the current UI.
+  - operation: PUT /api/v1/parts/{id}
+    reason: Part administration is outside the current UI.
+  - operation: GET /api/v1/stock-movements
+    reason: Stock movement history is outside the current UI.
+  - operation: POST /api/v1/stock-movements
+    reason: Stock movement capture is outside the current UI.
+  - operation: GET /api/v1/part-requests
+    reason: Part request management is outside the current UI.
+  - operation: POST /api/v1/part-requests
+    reason: Part request creation is outside the current UI.
+  - operation: POST /api/v1/part-requests/{id}/approve
+    reason: Part request approval is outside the current UI.
+  - operation: POST /api/v1/part-requests/{id}/reject
+    reason: Part request rejection is outside the current UI.
+  - operation: POST /api/v1/part-requests/{id}/issue
+    reason: Part issue is outside the current UI.
+  - operation: POST /api/v1/part-requests/{id}/use
+    reason: Part use is outside the current UI.
+  - operation: POST /api/v1/part-requests/{id}/return
+    reason: Part return is outside the current UI.
+  - operation: GET /api/v1/reports/preview
+    reason: Live report preview is not used by the current report screen.
+  - operation: GET /api/v1/reports/{id}
+    reason: Report detail is available from list payloads; no direct detail control exists.
+  - operation: PUT /api/v1/reports/{id}/narrative
+    reason: Narrative editing after report creation has no current control.
+  - operation: POST /api/v1/reports/{id}/new-version
+    reason: New report version creation has no current control.
+  - operation: GET /api/v1/notifications
+    reason: The notification inbox has no current web or Android screen.
+  - operation: POST /api/v1/notifications/read-all
+    reason: Notification inbox actions have no current UI.
+  - operation: POST /api/v1/notifications/devices
+    reason: Push device registration is handled outside the UI acceptance flow and requires Firebase credentials.
+  - operation: POST /api/v1/notifications/{id}/read
+    reason: Notification inbox actions have no current UI.
