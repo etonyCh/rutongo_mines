@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -15,12 +16,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -31,13 +29,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import rw.rutongo.mmems.android.data.AppSettings
-import rw.rutongo.mmems.android.ui.theme.GreenDark
+import rw.rutongo.mmems.android.ui.components.FormLabel
+import rw.rutongo.mmems.android.ui.components.PrimaryButton
+import rw.rutongo.mmems.android.ui.components.SectionDivider
+import rw.rutongo.mmems.android.ui.theme.SpecColors
+import rw.rutongo.mmems.android.ui.theme.SpecSpacing
+import rw.rutongo.mmems.android.ui.theme.SpecTypography
 
 @Composable
 fun LoginScreen(
@@ -54,86 +56,72 @@ fun LoginScreen(
     Box(
         Modifier
             .fillMaxSize()
-            .background(GreenDark)
+            .background(SpecColors.Background)
             .imePadding(),
     ) {
         Column(
             Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(24.dp),
-            verticalArrangement = Arrangement.Center,
+                .padding(horizontal = SpecSpacing.PhoneMargin, vertical = 48.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text("RUTONGO", style = MaterialTheme.typography.displaySmall, color = androidx.compose.ui.graphics.Color.White, fontWeight = FontWeight.Black)
-            Text(
-                "Mechanical equipment management",
-                style = MaterialTheme.typography.titleMedium,
-                color =
-                    androidx.compose.ui.graphics
-                        .Color(0xFFC6E8D6),
+            Text("RUTONGO MINES", style = SpecTypography.ScreenTitle)
+            Text("MECHANICAL DEPARTMENT", style = SpecTypography.Eyebrow)
+            SectionDivider()
+            Text("Sign in", style = SpecTypography.SectionTitle)
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                FormLabel("Username")
+                OutlinedTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                FormLabel("Password")
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = { password = it },
+                    singleLine = true,
+                    visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                    trailingIcon = {
+                        IconButton(onClick = { showPassword = !showPassword }) {
+                            Icon(if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = "Show or hide password")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+            state.loginError?.let { Text(it, color = SpecColors.ErrorText, style = SpecTypography.BodySmall) }
+            PrimaryButton(
+                text = if (state.signingIn) "Signing in…" else "SIGN IN",
+                onClick = { onLogin(username, password, baseUrl) },
+                enabled = !state.signingIn,
             )
-            Column(Modifier.height(32.dp)) {}
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text("Sign in", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            TextButton(onClick = { showServer = !showServer }) { Text(if (showServer) "Hide server setting" else "Server setting") }
+            if (showServer) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    FormLabel("Server URL")
                     OutlinedTextField(
-                        value = username,
-                        onValueChange = { username = it },
-                        label = { Text("Username") },
+                        value = baseUrl,
+                        onValueChange = { baseUrl = it },
+                        supportingText = { Text("Default emulator address: ${AppSettings.DEFAULT_API}") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        label = { Text("Password") },
-                        singleLine = true,
-                        visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                        trailingIcon = {
-                            IconButton(onClick = { showPassword = !showPassword }) {
-                                Icon(if (showPassword) Icons.Default.VisibilityOff else Icons.Default.Visibility, contentDescription = "Show password")
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    state.loginError?.let {
-                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
-                    }
-                    Button(
-                        onClick = { onLogin(username, password, baseUrl) },
-                        enabled = !state.signingIn,
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .height(56.dp),
-                    ) {
-                        if (state.signingIn) CircularProgressIndicator(Modifier.height(22.dp), strokeWidth = 2.dp) else Text("SIGN IN")
-                    }
-                    TextButton(onClick = { showServer = !showServer }) { Text(if (showServer) "Hide server setting" else "Server setting") }
-                    if (showServer) {
-                        OutlinedTextField(
-                            value = baseUrl,
-                            onValueChange = { baseUrl = it },
-                            label = { Text("Server URL") },
-                            supportingText = { Text("Default emulator address: ${AppSettings.DEFAULT_API}") },
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
                 }
             }
-            Column(Modifier.height(20.dp)) {}
+            Spacer(Modifier.height(12.dp))
             Text(
                 "Photos and inspections are stored encrypted on this device. Work can continue underground without a connection.",
-                color =
-                    androidx.compose.ui.graphics
-                        .Color(0xFFC6E8D6),
-                style = MaterialTheme.typography.bodyMedium,
+                style = SpecTypography.BodySmall,
             )
         }
         if (state.loading) {
-            CircularProgressIndicator(Modifier.align(Alignment.Center), color = androidx.compose.ui.graphics.Color.White)
+            CircularProgressIndicator(Modifier.align(Alignment.Center), color = SpecColors.Action)
         }
     }
 }

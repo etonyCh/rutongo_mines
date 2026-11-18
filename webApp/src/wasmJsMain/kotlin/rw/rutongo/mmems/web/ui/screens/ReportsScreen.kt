@@ -48,6 +48,7 @@ import rw.rutongo.mmems.web.data.todayDate
 import rw.rutongo.mmems.web.ui.InfoBlue
 import rw.rutongo.mmems.web.ui.SuccessGreen
 import rw.rutongo.mmems.web.ui.WarningAmber
+import rw.rutongo.mmems.web.ui.WebSpecColors
 import rw.rutongo.mmems.web.ui.components.EmptyState
 import rw.rutongo.mmems.web.ui.components.LoadingBlock
 import rw.rutongo.mmems.web.ui.components.MetricCard
@@ -127,7 +128,8 @@ private fun ReportCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = WebSpecColors.Background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -170,7 +172,8 @@ private fun ReportDetail(
     val canSubmit = me?.role == Role.SUPERVISOR && report.preparedBy == me.id && report.state in setOf(ReportState.DRAFT, ReportState.RETURNED_FOR_CORRECTION)
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = WebSpecColors.Background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             SectionTitle("${report.reportRef} · ${report.siteName}", "Version ${report.versionNo} · ${report.state.name.replace('_', ' ')}")

@@ -40,6 +40,7 @@ import rw.rutongo.mmems.web.WebIntent
 import rw.rutongo.mmems.web.WebState
 import rw.rutongo.mmems.web.data.AuditEventRow
 import rw.rutongo.mmems.web.data.WebUser
+import rw.rutongo.mmems.web.ui.WebSpecColors
 import rw.rutongo.mmems.web.ui.components.EmptyState
 import rw.rutongo.mmems.web.ui.components.LoadingBlock
 import rw.rutongo.mmems.web.ui.components.PageHeader
@@ -110,7 +111,10 @@ private fun UserCard(
     onIntent: (WebIntent) -> Unit,
 ) {
     val siteNames = user.siteIds.mapNotNull { id -> state.sites.firstOrNull { it.id == id }?.name }
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = WebSpecColors.Background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -150,7 +154,10 @@ private fun AuditList(state: WebState) {
 
 @Composable
 private fun AuditRow(event: AuditEventRow) {
-    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = WebSpecColors.Background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+    ) {
         Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(event.action ?: "—", fontWeight = FontWeight.SemiBold)

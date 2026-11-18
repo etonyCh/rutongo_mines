@@ -8,32 +8,41 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import rw.rutongo.mmems.android.AppContainer
 import rw.rutongo.mmems.android.data.LocalStore
 import rw.rutongo.mmems.android.sync.SyncWorker
-import rw.rutongo.mmems.android.ui.components.FieldLabel
+import rw.rutongo.mmems.android.ui.components.FormLabel
+import rw.rutongo.mmems.android.ui.components.PrimaryButton
+import rw.rutongo.mmems.android.ui.components.SectionDivider
+import rw.rutongo.mmems.android.ui.components.SpecTextField
 import rw.rutongo.mmems.android.ui.components.StatusPill
+import rw.rutongo.mmems.android.ui.components.statusColor
+import rw.rutongo.mmems.android.ui.theme.SpecColors
+import rw.rutongo.mmems.android.ui.theme.SpecSpacing
+import rw.rutongo.mmems.android.ui.theme.SpecTypography
 import rw.rutongo.mmems.shared.api.StatusUpdateDto
 import java.time.Instant
 import java.util.UUID
@@ -47,7 +56,7 @@ fun StatusUpdateScreen(
     onReportBreakdown: () -> Unit,
 ) {
     val equipment by container.store.equipmentFlow(equipmentId).collectAsStateWithLifecycle(null)
-    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val scope = rememberCoroutineScope()
     val current = equipment
     var status by remember(current?.id) { mutableStateOf(current?.operational_status?.takeIf { it in setOf("OPERATIONAL", "UNDER_REPAIR", "DOWN") } ?: "OPERATIONAL") }
     var problem by remember(current?.id) { mutableStateOf("") }
@@ -60,14 +69,20 @@ fun StatusUpdateScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Record status") },
-                navigationIcon = { OutlinedButton(onClick = onDone) { Text("Back") } },
+                title = { Text("Update equipment status", style = SpecTypography.SectionTitle) },
+                navigationIcon = { TextButton(onClick = onDone) { Text("Back") } },
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = SpecColors.Background,
+                        titleContentColor = SpecColors.Text,
+                        navigationIconContentColor = SpecColors.Action,
+                    ),
             )
         },
     ) { padding ->
         if (current == null) {
             Column(Modifier.fillMaxSize().padding(padding).padding(24.dp)) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(color = SpecColors.Action)
             }
             return@Scaffold
         }
@@ -76,70 +91,55 @@ fun StatusUpdateScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(horizontal = SpecSpacing.PhoneMargin, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(SpecSpacing.SectionGap),
         ) {
-            Text(current.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("${current.equipment_code} · ${current.site_name} · version ${current.version}", color = MaterialTheme.colorScheme.onSurfaceVariant)
-            StatusPill(current.operational_status)
-            OutlinedButton(onClick = onReportBreakdown, modifier = Modifier.fillMaxWidth()) { Text("REPORT BREAKDOWN") }
-            FieldLabel("New status")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                listOf("OPERATIONAL", "UNDER_REPAIR", "DOWN").forEach {
-                    FilterChip(
-                        selected = status == it,
-                        onClick = { status = it },
-                        label = { Text(it.replace('_', ' ')) },
-                        modifier = Modifier.weight(1f),
-                    )
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("${current.equipment_code} · ${current.name}", style = SpecTypography.ScreenTitle)
+                Text("${current.site_name} · ${current.tunnel_name ?: "Not recorded"} · version ${current.version}", style = SpecTypography.BodySmall)
+                StatusPill(current.operational_status)
+            }
+            SectionDivider()
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FormLabel("New status")
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    listOf("OPERATIONAL", "UNDER_REPAIR", "DOWN").forEach { option ->
+                        val selected = status == option
+                        val color = statusColor(option)
+                        Button(
+                            onClick = { status = option },
+                            modifier = Modifier.height(SpecSpacing.MinimumTouch).weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            colors =
+                                ButtonDefaults.buttonColors(
+                                    containerColor = if (selected) color else SpecColors.Background,
+                                    contentColor = if (selected) Color.White else color,
+                                ),
+                            border = androidx.compose.foundation.BorderStroke(1.5.dp, color),
+                        ) {
+                            Text(option.replace('_', ' '), style = SpecTypography.Label)
+                        }
+                    }
                 }
             }
+            TextButton(onClick = onReportBreakdown, modifier = Modifier.fillMaxWidth()) { Text("REPORT BREAKDOWN") }
             if (status != "OPERATIONAL") {
-                OutlinedTextField(
-                    value = problem,
-                    onValueChange = { problem = it },
-                    label = { Text("Problem (required)") },
-                    minLines = 2,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = action,
-                    onValueChange = { action = it },
-                    label = { Text("Action taken") },
-                    minLines = 2,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = parts,
-                    onValueChange = { parts = it },
-                    label = { Text("Parts required") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                SpecTextField(problem, { problem = it }, "Problem", required = true, minLines = 2)
+                SpecTextField(action, { action = it }, "Action taken", minLines = 2)
+                SpecTextField(parts, { parts = it }, "Parts required", singleLine = true)
             }
-            OutlinedTextField(
-                value = remarks,
-                onValueChange = { remarks = it },
-                label = { Text("Remarks") },
-                minLines = 2,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = overrideReason,
-                onValueChange = { overrideReason = it },
-                label = { Text("Override reason (only if contradicting an automatic safety rule)") },
-                minLines = 2,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            SpecTextField(remarks, { remarks = it }, "Remarks", minLines = 2)
+            SpecTextField(overrideReason, { overrideReason = it }, "Override reason", minLines = 2)
+            error?.let { Text(it, color = SpecColors.ErrorText, style = SpecTypography.BodySmall) }
             if (queued) {
-                Text("Queued locally. It will be sent by the sync worker.", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Text("Queued locally. It will be sent by the sync worker.", color = SpecColors.Action, style = SpecTypography.BodySmall)
             }
-            Button(
+            PrimaryButton(
+                text = "QUEUE STATUS UPDATE",
                 onClick = {
                     if (status != "OPERATIONAL" && problem.isBlank()) {
-                        error = "Describe the problem before recording $status."
-                        return@Button
+                        error = "Describe the problem before recording ${status.replace('_', ' ')}."
+                        return@PrimaryButton
                     }
                     val clientUuid = UUID.randomUUID().toString()
                     val payload =
@@ -163,19 +163,14 @@ fun StatusUpdateScreen(
                     queued = true
                     error = null
                     scope.launch {
-                        kotlinx.coroutines.delay(700)
+                        delay(700)
                         onDone()
                     }
                 },
-                modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-            ) { Text("QUEUE STATUS UPDATE") }
+            )
             Text(
-                "Status events are append-only. A late offline event does not replace a newer status on the server.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                "Date, time and user name are recorded automatically. Status events are append-only; a late offline event does not replace a newer server status.",
+                style = SpecTypography.BodySmall,
             )
         }
     }

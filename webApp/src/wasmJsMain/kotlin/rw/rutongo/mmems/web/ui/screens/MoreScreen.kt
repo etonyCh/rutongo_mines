@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import rw.rutongo.mmems.web.WebIntent
 import rw.rutongo.mmems.web.WebState
 import rw.rutongo.mmems.web.data.apiBaseUrl
+import rw.rutongo.mmems.web.ui.WebSpecColors
 import rw.rutongo.mmems.web.ui.components.PageHeader
 import rw.rutongo.mmems.web.ui.components.SectionTitle
 import rw.rutongo.mmems.web.ui.components.StatusBadge
@@ -53,7 +54,10 @@ fun MoreScreen(
             onRefresh = { onIntent(WebIntent.Refresh) },
         )
         me?.let { user ->
-            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = WebSpecColors.Background),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+            ) {
                 Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     SectionTitle(user.fullName, "Signed in as ${user.username}")
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -75,7 +79,10 @@ fun MoreScreen(
                 }
             }
         }
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = WebSpecColors.Background),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        ) {
             Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Application", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 Text("Rutongo MMEMS web · Compose Multiplatform (Wasm)", style = MaterialTheme.typography.bodyMedium)

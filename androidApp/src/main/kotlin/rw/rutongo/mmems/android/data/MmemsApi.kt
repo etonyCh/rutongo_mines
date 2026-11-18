@@ -46,7 +46,7 @@ import rw.rutongo.mmems.shared.api.ServiceTypeViewDto
 import rw.rutongo.mmems.shared.api.SessionResponse
 import rw.rutongo.mmems.shared.api.ShiftDto
 import rw.rutongo.mmems.shared.api.SiteDto
-import rw.rutongo.mmems.shared.api.StatusEventDto
+import rw.rutongo.mmems.shared.api.StatusResultDto
 import rw.rutongo.mmems.shared.api.WorkingHoursResponseDto
 import java.io.File
 
@@ -93,7 +93,7 @@ interface MmemsApi {
 
     suspend fun submitInspection(operation: Outbox): ApiResult<InspectionDetailDto>
 
-    suspend fun submitStatus(operation: Outbox): ApiResult<StatusEventDto>
+    suspend fun submitStatus(operation: Outbox): ApiResult<StatusResultDto>
 
     suspend fun breakdowns(): ApiResult<List<BreakdownViewDto>>
 
@@ -145,7 +145,7 @@ class KtorMmemsApi(
             val response =
                 client.post("${settings.apiBaseUrl}/api/v1/auth/login") {
                     contentType(ContentType.Application.Json)
-                    setBody(LoginRequest(username = username, password = password, deviceLabel = deviceLabel))
+                    setBody(LoginRequest(username = username, password = password, clientType = "ANDROID", deviceLabel = deviceLabel))
                 }
             val result = parse<SessionResponse>(response)
             if (result is ApiResult.Ok) tokens.save(result.value)
@@ -168,7 +168,7 @@ class KtorMmemsApi(
 
     override suspend fun submitInspection(operation: Outbox): ApiResult<InspectionDetailDto> = jwtPost("/api/v1/inspections", operation.payload) { header("Idempotency-Key", operation.client_uuid) }
 
-    override suspend fun submitStatus(operation: Outbox): ApiResult<StatusEventDto> =
+    override suspend fun submitStatus(operation: Outbox): ApiResult<StatusResultDto> =
         jwtPost("/api/v1/equipment/${operation.equipment_id}/status", operation.payload) {
             header("Idempotency-Key", operation.client_uuid)
             operation.if_match?.let { header(HttpHeaders.IfMatch, it.toString()) }
@@ -300,7 +300,7 @@ class KtorMmemsApi(
             runCatching {
                 client.post("${settings.apiBaseUrl}/api/v1/auth/refresh") {
                     contentType(ContentType.Application.Json)
-                    setBody(RefreshRequest(refreshToken = refresh))
+                    setBody(RefreshRequest(refreshToken = refresh, clientType = "ANDROID"))
                 }
             }.getOrNull() ?: return false
         if (!response.status.isSuccess()) return false
@@ -327,16 +327,18 @@ class KtorMmemsApi(
     }
 
     companion object {
+        internal val apiJson =
+            Json {
+                ignoreUnknownKeys = true
+                encodeDefaults = true
+                explicitNulls = false
+            }
+
         fun defaultClient(): HttpClient =
             HttpClient(OkHttp) {
                 expectSuccess = false
                 install(ContentNegotiation) {
-                    json(
-                        Json {
-                            ignoreUnknownKeys = true
-                            explicitNulls = false
-                        },
-                    )
+                    json(apiJson)
                 }
                 install(HttpTimeout) {
                     requestTimeoutMillis = 30_000

@@ -6,25 +6,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,20 +19,27 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import rw.rutongo.mmems.android.AppContainer
 import rw.rutongo.mmems.android.sync.SyncWorker
-import rw.rutongo.mmems.android.ui.components.FieldLabel
+import rw.rutongo.mmems.android.ui.components.FilterPill
+import rw.rutongo.mmems.android.ui.components.FormLabel
+import rw.rutongo.mmems.android.ui.components.PrimaryButton
+import rw.rutongo.mmems.android.ui.components.ScreenHeader
+import rw.rutongo.mmems.android.ui.components.SecondaryButton
+import rw.rutongo.mmems.android.ui.components.SectionDivider
+import rw.rutongo.mmems.android.ui.components.SpecTextField
 import rw.rutongo.mmems.android.ui.components.StatusPill
+import rw.rutongo.mmems.android.ui.theme.SpecColors
+import rw.rutongo.mmems.android.ui.theme.SpecSpacing
+import rw.rutongo.mmems.android.ui.theme.SpecTypography
 import java.time.Instant
 
 private val breakdownCategories = listOf("MECHANICAL", "ELECTRICAL", "HYDRAULIC", "SAFETY", "OTHER")
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BreakdownReportScreen(
     container: AppContainer,
@@ -56,29 +50,28 @@ fun BreakdownReportScreen(
     var selectedEquipmentId by remember(initialEquipmentId) { mutableStateOf(initialEquipmentId?.takeIf { it.isNotBlank() }) }
     val equipment by container.store.equipment().collectAsStateWithLifecycle(emptyList())
     val selected = selectedEquipmentId?.let { container.store.equipment(it) }
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Report breakdown") },
-                navigationIcon = { OutlinedButton(onClick = onDone) { Text("Back") } },
-            )
-        },
-    ) { padding ->
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(horizontal = SpecSpacing.PhoneMargin),
+        verticalArrangement = Arrangement.spacedBy(SpecSpacing.SectionGap),
+    ) {
+        SecondaryButton("Back", onDone)
         if (selected == null) {
             EquipmentPicker(
-                modifier = Modifier.fillMaxSize().padding(padding),
+                modifier = Modifier.weight(1f),
                 equipment = equipment,
                 onSelect = { selectedEquipmentId = it },
             )
-            return@Scaffold
+        } else {
+            BreakdownReportForm(
+                container = container,
+                equipmentId = selected.id,
+                modifier = Modifier.weight(1f),
+                onDone = onDone,
+                onOpenBreakdown = onOpenBreakdown,
+            )
         }
-        BreakdownReportForm(
-            container = container,
-            equipmentId = selected.id,
-            modifier = Modifier.fillMaxSize().padding(padding),
-            onDone = onDone,
-            onOpenBreakdown = onOpenBreakdown,
-        )
     }
 }
 
@@ -96,32 +89,26 @@ private fun EquipmentPicker(
                 it.equipment_code.contains(query, true) ||
                 it.site_name.contains(query, true)
         }
-    LazyColumn(modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item {
-            Text("Choose equipment", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("Only cached equipment is available offline.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        item {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { query = it },
-                label = { Text("Search equipment or site") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-        items(visible, key = { it.id }) { item ->
-            Card(Modifier.fillMaxWidth().clickable { onSelect(item.id) }) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(item.name, fontWeight = FontWeight.Bold)
-                    Text("${item.equipment_code} · ${item.site_name}", style = MaterialTheme.typography.bodySmall)
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(SpecSpacing.SectionGap)) {
+        ScreenHeader("Report breakdown", eyebrow = "EQUIPMENT", subtitle = "Only cached equipment is available offline.")
+        SpecTextField(query, { query = it }, "Search equipment or site", singleLine = true)
+        LazyColumn(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(0.dp)) {
+            items(visible, key = { it.id }) { item ->
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelect(item.id) }
+                        .padding(vertical = 12.dp),
+                ) {
+                    Text(item.name, style = SpecTypography.Body)
+                    Text("${item.equipment_code} · ${item.site_name}", style = SpecTypography.BodySmall)
                     StatusPill(item.operational_status)
+                    SectionDivider()
                 }
             }
-        }
-        if (visible.isEmpty()) {
-            item { Text("No cached equipment matches this search.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            if (visible.isEmpty()) {
+                item { Text("No cached equipment matches this search.", style = SpecTypography.BodySmall) }
+            }
         }
     }
 }
@@ -148,84 +135,54 @@ private fun BreakdownReportForm(
     if (equipment == null) return
     Column(
         modifier
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(SpecSpacing.SectionGap),
     ) {
-        Text(equipment.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-        Text("${equipment.equipment_code} · ${equipment.site_name}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        ScreenHeader("Report breakdown", eyebrow = equipment.equipment_code, subtitle = "${equipment.name} · ${equipment.site_name}")
         StatusPill(equipment.operational_status)
         if (active != null && !queued) {
-            Card(Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("An active breakdown already exists.", fontWeight = FontWeight.Bold)
-                    Text(active.problem, style = MaterialTheme.typography.bodySmall)
-                    OutlinedButton(onClick = { onOpenBreakdown(active.id) }, modifier = Modifier.fillMaxWidth()) {
-                        Text("OPEN ACTIVE BREAKDOWN")
-                    }
-                }
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("An active breakdown already exists.", style = SpecTypography.SectionTitle)
+                Text(active.problem, style = SpecTypography.BodySmall)
+                SecondaryButton("OPEN ACTIVE BREAKDOWN", { onOpenBreakdown(active.id) })
             }
             return@Column
         }
-        FieldLabel("Category")
+        FormLabel("Category")
         breakdownCategories.chunked(3).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 row.forEach {
-                    FilterChip(
-                        selected = category == it,
-                        onClick = { category = it },
-                        label = { Text(it.lowercase().replaceFirstChar(Char::uppercase)) },
-                        modifier = Modifier.weight(1f),
+                    FilterPill(
+                        it.lowercase().replaceFirstChar(Char::uppercase),
+                        category == it,
+                        { category = it },
+                        Modifier.weight(1f),
                     )
                 }
             }
         }
-        OutlinedTextField(
-            value = problem,
-            onValueChange = { problem = it },
-            label = { Text("Problem (required)") },
-            minLines = 3,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = actionTaken,
-            onValueChange = { actionTaken = it },
-            label = { Text("Immediate action taken") },
-            minLines = 2,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = partsRequired,
-            onValueChange = { partsRequired = it },
-            label = { Text("Parts required") },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        OutlinedTextField(
-            value = remarks,
-            onValueChange = { remarks = it },
-            label = { Text("Remarks") },
-            minLines = 2,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        SpecTextField(problem, { problem = it }, "Problem", required = true, minLines = 3)
+        SpecTextField(actionTaken, { actionTaken = it }, "Immediate action taken", minLines = 2)
+        SpecTextField(partsRequired, { partsRequired = it }, "Parts required", singleLine = true)
+        SpecTextField(remarks, { remarks = it }, "Remarks", minLines = 2)
         Text(
             "The breakdown starts at the current device time. Record the equipment status separately if it also changed.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = SpecTypography.BodySmall,
         )
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        error?.let { Text(it, color = SpecColors.ErrorText, style = SpecTypography.BodySmall) }
         if (queued) {
             Text(
                 "Breakdown queued locally. It will be sent with an idempotency key when a connection is available.",
-                color = MaterialTheme.colorScheme.primary,
-                fontWeight = FontWeight.Bold,
+                color = SpecColors.Action,
+                style = SpecTypography.Body,
             )
         }
-        Button(
-            onClick = {
+        PrimaryButton(
+            "QUEUE BREAKDOWN REPORT",
+            {
                 if (problem.isBlank()) {
                     error = "Describe the problem before reporting the breakdown."
-                    return@Button
+                    return@PrimaryButton
                 }
                 container.store.enqueueBreakdownReport(
                     equipment = equipment,
@@ -245,7 +202,6 @@ private fun BreakdownReportForm(
                 }
             },
             enabled = !queued,
-            modifier = Modifier.fillMaxWidth().height(56.dp),
-        ) { Text("QUEUE BREAKDOWN REPORT") }
+        )
     }
 }

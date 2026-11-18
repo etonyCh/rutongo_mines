@@ -5,7 +5,7 @@ import rw.rutongo.mmems.android.data.LocalStore
 import rw.rutongo.mmems.android.data.MmemsApi
 import rw.rutongo.mmems.shared.api.BreakdownViewDto
 import rw.rutongo.mmems.shared.api.MaintenanceViewDto
-import rw.rutongo.mmems.shared.api.StatusEventDto
+import rw.rutongo.mmems.shared.api.StatusResultDto
 import java.time.Instant
 
 data class SyncReport(
@@ -91,6 +91,12 @@ class SyncEngine(
                     photos++
                 }
                 is ApiResult.Invalid -> {
+                    if (result.isAuthFailure()) {
+                        store.markPhotoRetry(photo.id, result.message)
+                        retry = true
+                        message = result.message
+                        break
+                    }
                     store.markPhotoRejected(photo.id, "${result.code}: ${result.message}")
                     rejected++
                 }
@@ -130,9 +136,9 @@ class SyncEngine(
                 is ApiResult.Ok -> {
                     when (operation.kind) {
                         "STATUS" -> {
-                            val event = result.value as? StatusEventDto
+                            val statusResult = result.value as? StatusResultDto
                             store.markOutboxDone(operation.client_uuid, result.rawBody)
-                            if (event != null) store.updateEquipmentAfterStatus(operation.equipment_id, event.status, event.version)
+                            if (statusResult != null) store.updateEquipmentAfterStatus(operation.equipment_id, statusResult.event.newStatus, statusResult.equipmentVersion)
                         }
                         "BREAKDOWN_CREATE" -> {
                             val view = result.value as BreakdownViewDto
@@ -154,6 +160,12 @@ class SyncEngine(
                     sent++
                 }
                 is ApiResult.Invalid -> {
+                    if (result.isAuthFailure()) {
+                        store.markOutboxAttempt(operation.client_uuid, result.message)
+                        retry = true
+                        message = result.message
+                        break
+                    }
                     clearBreakdownPending(operation)
                     if (operation.kind == "BREAKDOWN_CREATE") store.deleteBreakdown(operation.client_uuid)
                     store.markOutboxRejected(operation.client_uuid, "${result.code}: ${result.message}")
@@ -191,6 +203,8 @@ class SyncEngine(
     }
 
     private fun ApiResult<*>.isForbidden() = this is ApiResult.Invalid && code == "FORBIDDEN"
+
+    private fun ApiResult<*>.isAuthFailure() = this is ApiResult.Invalid && code == "UNAUTHENTICATED"
 
     private fun ApiResult<*>.failure(): ApiResult<Unit> =
         when (this) {

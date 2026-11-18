@@ -34,7 +34,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import rw.rutongo.mmems.shared.api.SiteDto
@@ -42,6 +41,8 @@ import rw.rutongo.mmems.web.ui.DangerRed
 import rw.rutongo.mmems.web.ui.InfoBlue
 import rw.rutongo.mmems.web.ui.SuccessGreen
 import rw.rutongo.mmems.web.ui.WarningAmber
+import rw.rutongo.mmems.web.ui.WebSpecColors
+import rw.rutongo.mmems.web.ui.WebSpecTypography
 
 @Composable
 fun PageHeader(
@@ -59,7 +60,7 @@ fun PageHeader(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(title, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                Text(title, style = WebSpecTypography.ScreenTitle)
                 Spacer(Modifier.height(4.dp))
                 Text(
                     if (site.isNullOrBlank()) subtitle else "$subtitle · $site",
@@ -118,24 +119,16 @@ fun MetricCard(
 ) {
     Card(
         modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        colors = CardDefaults.cardColors(containerColor = WebSpecColors.Background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Box(
-                modifier =
-                    Modifier
-                        .size(width = 36.dp, height = 5.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(accent),
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(4.dp))
-            Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(label, style = WebSpecTypography.Label)
+            Spacer(Modifier.height(8.dp))
+            Text(value, style = WebSpecTypography.SectionTitle, color = accent)
             detail?.let {
                 Spacer(Modifier.height(4.dp))
-                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(it, style = MaterialTheme.typography.bodySmall, color = WebSpecColors.SecondaryText)
             }
         }
     }
@@ -154,21 +147,13 @@ fun StatusBadge(
                 .background(color.copy(alpha = 0.12f))
                 .padding(horizontal = 10.dp, vertical = 4.dp),
     ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(statusIcon(text), color = color, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-            Text(text.replace('_', ' '), color = color, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold)
-        }
+        Text(
+            text.replace('_', ' ').uppercase(),
+            color = color,
+            style = WebSpecTypography.Status,
+        )
     }
 }
-
-fun statusIcon(text: String): String =
-    when (text.uppercase()) {
-        "APPROVED", "OPERATIONAL", "ACTIVE", "COMPLETED", "VERIFIED", "COMMITTED", "OK" -> "✓"
-        "DOWN", "REJECTED", "CRITICAL", "OVERDUE", "FAIL" -> "!"
-        "UNDER_REPAIR", "SUBMITTED", "PENDING", "DUE_SOON", "RETURNED", "RETURNED_FOR_CORRECTION", "AWAITING_APPROVAL", "PREVIEWED", "PENDING_VERIFICATION" -> "▲"
-        "OPEN", "IN_PROGRESS", "RESUBMITTED" -> "●"
-        else -> "•"
-    }
 
 fun statusColor(text: String): Color =
     when (text.uppercase()) {
@@ -176,7 +161,7 @@ fun statusColor(text: String): Color =
         "DOWN", "REJECTED", "CRITICAL", "OVERDUE", "FAIL" -> DangerRed
         "UNDER_REPAIR", "SUBMITTED", "PENDING", "DUE_SOON", "RETURNED", "RETURNED_FOR_CORRECTION", "AWAITING_APPROVAL", "PREVIEWED", "PENDING_VERIFICATION", "CORRECTION_REQUESTED" -> WarningAmber
         "OPEN", "IN_PROGRESS", "RESUBMITTED" -> InfoBlue
-        else -> Color(0xFF5E6B64)
+        else -> WebSpecColors.SecondaryText
     }
 
 @Composable
@@ -186,10 +171,11 @@ fun EmptyState(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = WebSpecColors.Background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-            Text(message, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(message, color = WebSpecColors.SecondaryText)
         }
     }
 }
@@ -233,8 +219,8 @@ fun SectionTitle(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
-            subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            Text(title, style = WebSpecTypography.SectionTitle)
+            subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = WebSpecColors.SecondaryText) }
         }
         trailing?.invoke()
     }
@@ -246,5 +232,10 @@ fun PrimaryAction(
     enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
-    Button(onClick = onClick, enabled = enabled, contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp)) { Text(text) }
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.height(56.dp),
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
+    ) { Text(text, style = WebSpecTypography.Button) }
 }

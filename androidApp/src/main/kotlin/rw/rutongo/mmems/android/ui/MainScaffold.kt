@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -114,6 +115,14 @@ fun MainScaffold(
                     tabs.forEach { tab ->
                         NavigationBarItem(
                             selected = current == tab.route,
+                            colors =
+                                NavigationBarItemDefaults.colors(
+                                    selectedIconColor = rw.rutongo.mmems.android.ui.theme.SpecColors.Action,
+                                    selectedTextColor = rw.rutongo.mmems.android.ui.theme.SpecColors.Action,
+                                    indicatorColor = rw.rutongo.mmems.android.ui.theme.SpecColors.SelectedSurface,
+                                    unselectedIconColor = rw.rutongo.mmems.android.ui.theme.SpecColors.DisabledText,
+                                    unselectedTextColor = rw.rutongo.mmems.android.ui.theme.SpecColors.DisabledText,
+                                ),
                             onClick = {
                                 nav.navigate(tab.route) {
                                     popUpTo(nav.graph.findStartDestination().id) { saveState = true }
@@ -139,7 +148,7 @@ fun MainScaffold(
                     onOpenBreakdowns = { nav.navigate("breakdowns") },
                 )
             }
-            composable("dashboard") { DashboardScreen(container, me) }
+            composable("dashboard") { DashboardScreen(container, me, onOpenReport = { nav.navigate("report") }) }
             composable("inspections") { InspectionsScreen(container, me, onOpen = { nav.navigate("inspection/$it") }, onResume = { nav.navigate("draft/$it") }) }
             composable("equipment") { EquipmentScreen(container, onOpen = { nav.navigate("status/$it") }) }
             composable("tasks") { TasksScreen(container) }

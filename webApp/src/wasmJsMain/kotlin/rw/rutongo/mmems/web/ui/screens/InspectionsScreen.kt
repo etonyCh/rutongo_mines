@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import rw.rutongo.mmems.shared.api.ExpectedInspectionDto
 import rw.rutongo.mmems.web.WebIntent
 import rw.rutongo.mmems.web.WebState
+import rw.rutongo.mmems.web.ui.WebSpecColors
 import rw.rutongo.mmems.web.ui.components.EmptyState
 import rw.rutongo.mmems.web.ui.components.LoadingBlock
 import rw.rutongo.mmems.web.ui.components.PageHeader
@@ -60,7 +61,8 @@ fun InspectionsScreen(
 private fun InspectionCard(inspection: ExpectedInspectionDto) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = WebSpecColors.Background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(16.dp),

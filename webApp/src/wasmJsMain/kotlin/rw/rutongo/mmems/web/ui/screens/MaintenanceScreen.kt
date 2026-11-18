@@ -36,6 +36,7 @@ import rw.rutongo.mmems.shared.enums.MaintenanceVerificationStatus
 import rw.rutongo.mmems.shared.enums.Role
 import rw.rutongo.mmems.web.WebIntent
 import rw.rutongo.mmems.web.WebState
+import rw.rutongo.mmems.web.ui.WebSpecColors
 import rw.rutongo.mmems.web.ui.components.EmptyState
 import rw.rutongo.mmems.web.ui.components.LoadingBlock
 import rw.rutongo.mmems.web.ui.components.PageHeader
@@ -79,7 +80,8 @@ private fun MaintenanceCard(
     var action by remember(record.id) { mutableStateOf<MaintenanceAction?>(null) }
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        colors = CardDefaults.cardColors(containerColor = WebSpecColors.Background),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
     ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {

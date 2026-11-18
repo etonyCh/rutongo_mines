@@ -18,6 +18,7 @@ import rw.rutongo.mmems.shared.api.ChecklistItemDto
 import rw.rutongo.mmems.shared.api.EquipmentDto
 import rw.rutongo.mmems.shared.api.ExpectedInspectionDto
 import rw.rutongo.mmems.shared.api.InspectionDetailDto
+import rw.rutongo.mmems.shared.api.InspectionSummaryDto
 import rw.rutongo.mmems.shared.api.MaintenanceCreateDto
 import rw.rutongo.mmems.shared.api.MaintenanceTechnicianDto
 import rw.rutongo.mmems.shared.api.MaintenanceViewDto
@@ -28,7 +29,8 @@ import rw.rutongo.mmems.shared.api.ServiceTypeViewDto
 import rw.rutongo.mmems.shared.api.SessionResponse
 import rw.rutongo.mmems.shared.api.ShiftDto
 import rw.rutongo.mmems.shared.api.SiteDto
-import rw.rutongo.mmems.shared.api.StatusEventDto
+import rw.rutongo.mmems.shared.api.StatusEventViewDto
+import rw.rutongo.mmems.shared.api.StatusResultDto
 import rw.rutongo.mmems.shared.api.WorkingHoursResponseDto
 import rw.rutongo.mmems.shared.enums.BreakdownState
 import rw.rutongo.mmems.shared.enums.MaintenanceVerificationStatus
@@ -87,7 +89,7 @@ class LocalStoreSyncTest {
             store.enqueueOutbox(clientUuid, "STATUS", equipmentId, payload, ifMatch = 3)
             assertEquals(1, store.pendingOutbox().size)
 
-            val api = FakeApi(statusResult = { ApiResult.Ok(StatusEventDto("event-1", equipmentId, "DOWN", "2026-01-01T00:00:00Z", "2026-01-01T00:01:00Z", 4)) })
+            val api = FakeApi(statusResult = { ApiResult.Ok(statusResult("DOWN", 4)) })
             val report = SyncEngine(store, api).syncAll(refreshReferences = false)
 
             assertEquals(1, report.sentOperations)
@@ -155,13 +157,44 @@ class LocalStoreSyncTest {
                 )
             store.saveDraft(draft)
             store.enqueueOutbox(clientUuid, "INSPECTION", equipmentId, "{}")
-            val api = FakeApi(inspectionResult = { ApiResult.Ok(InspectionDetailDto("inspection-1", clientUuid, "COMPLETED", "COMPLETED", false, "2026-01-01T00:05:00Z"), "inspection-1") })
+            val api = FakeApi(inspectionResult = { ApiResult.Ok(inspectionDetail(clientUuid), "inspection-1") })
 
             SyncEngine(store, api).syncAll(refreshReferences = false)
 
             assertNull(store.draft(clientUuid))
             assertEquals("DONE", store.outbox(clientUuid)?.state)
             assertEquals("inspection-1", store.outbox(clientUuid)?.server_reference)
+        }
+
+    @Test
+    fun `expired authentication preserves the queued inspection and draft`() =
+        runTest {
+            val clientUuid = UUID.randomUUID().toString()
+            val draft =
+                InspectionDraft(
+                    clientUuid = clientUuid,
+                    equipmentId = equipmentId,
+                    equipmentName = "LHD 01",
+                    equipmentCode = "EQ-01",
+                    siteId = siteId,
+                    siteName = "Kigali site",
+                    shiftId = "shift-1",
+                    shiftCode = "DAY",
+                    reportDate = "2026-01-01",
+                    capturedAt = "2026-01-01T00:00:00Z",
+                    startedAt = "2026-01-01T00:00:00Z",
+                    step = WizardStep.SIGN,
+                )
+            store.saveDraft(draft)
+            store.enqueueOutbox(clientUuid, "INSPECTION", equipmentId, "{}")
+            val api = FakeApi(inspectionResult = { ApiResult.Invalid("UNAUTHENTICATED", "Authentication is required.") })
+
+            val report = SyncEngine(store, api).syncAll(refreshReferences = false)
+
+            assertTrue(report.retryNeeded)
+            assertEquals("RETRY", store.outbox(clientUuid)?.state)
+            assertEquals(1, store.pendingOutbox().size)
+            assertEquals(clientUuid, store.draft(clientUuid)?.clientUuid)
         }
 
     @Test
@@ -274,6 +307,47 @@ class LocalStoreSyncTest {
             assertNull(store.breakdown("server-breakdown-2")?.pending_state)
         }
 
+    private fun inspectionDetail(clientUuid: String) =
+        InspectionDetailDto(
+            inspection =
+                InspectionSummaryDto(
+                    id = "inspection-1",
+                    clientUuid = clientUuid,
+                    equipmentId = equipmentId,
+                    siteId = siteId,
+                    shiftId = "shift-1",
+                    reportDate = "2026-01-01",
+                    inspectorId = "inspector-1",
+                    inspectorEid = "EID-1",
+                    result = "COMPLETED",
+                    submittedLate = false,
+                    capturedAt = "2026-01-01T00:00:00Z",
+                    startedAt = "2026-01-01T00:00:00Z",
+                    submittedAt = "2026-01-01T00:05:00Z",
+                ),
+        )
+
+    private fun statusResult(
+        newStatus: String,
+        version: Long,
+    ) = StatusResultDto(
+        event =
+            StatusEventViewDto(
+                id = "event-1",
+                equipmentId = equipmentId,
+                sequence = 1,
+                newStatus = newStatus,
+                siteId = siteId,
+                userId = "user-1",
+                userEid = "EID-1",
+                occurredAt = "2026-01-01T00:00:00Z",
+                recordedAt = "2026-01-01T00:01:00Z",
+                source = "MANUAL",
+            ),
+        equipmentVersion = version,
+        projected = true,
+    )
+
     private fun breakdownView(
         id: String,
         state: BreakdownState = BreakdownState.REPORTED,
@@ -293,7 +367,7 @@ class LocalStoreSyncTest {
     )
 
     private class FakeApi(
-        private val statusResult: (suspend (Outbox) -> ApiResult<StatusEventDto>)? = null,
+        private val statusResult: (suspend (Outbox) -> ApiResult<StatusResultDto>)? = null,
         private val inspectionResult: (suspend (Outbox) -> ApiResult<InspectionDetailDto>)? = null,
         private val photoResult: (suspend (Pending_photo) -> ApiResult<PhotoDto>)? = null,
         private val breakdownCreateResult: (suspend (Outbox) -> ApiResult<BreakdownViewDto>)? = null,
@@ -321,7 +395,7 @@ class LocalStoreSyncTest {
 
         override suspend fun submitInspection(operation: Outbox): ApiResult<InspectionDetailDto> = inspectionResult?.invoke(operation) ?: error("not used")
 
-        override suspend fun submitStatus(operation: Outbox): ApiResult<StatusEventDto> = statusResult?.invoke(operation) ?: error("not used")
+        override suspend fun submitStatus(operation: Outbox): ApiResult<StatusResultDto> = statusResult?.invoke(operation) ?: error("not used")
 
         override suspend fun breakdowns(): ApiResult<List<BreakdownViewDto>> = breakdownsResult
 

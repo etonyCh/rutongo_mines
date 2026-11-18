@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import rw.rutongo.mmems.web.WebIntent
 import rw.rutongo.mmems.web.WebState
+import rw.rutongo.mmems.web.ui.WebSpecColors
 import rw.rutongo.mmems.web.ui.components.EmptyState
 import rw.rutongo.mmems.web.ui.components.LoadingBlock
 import rw.rutongo.mmems.web.ui.components.PageHeader
@@ -68,7 +69,8 @@ fun EquipmentScreen(
                     items(items, key = { it.id }) { equipment ->
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            colors = CardDefaults.cardColors(containerColor = WebSpecColors.Background),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth().padding(16.dp),

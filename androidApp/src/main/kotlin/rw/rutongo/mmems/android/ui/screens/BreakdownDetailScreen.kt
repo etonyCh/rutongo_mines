@@ -5,21 +5,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -27,16 +22,24 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import rw.rutongo.mmems.android.AppContainer
 import rw.rutongo.mmems.android.sync.SyncWorker
-import rw.rutongo.mmems.android.ui.components.FieldLabel
-import rw.rutongo.mmems.android.ui.components.SectionCard
+import rw.rutongo.mmems.android.ui.components.FilterPill
+import rw.rutongo.mmems.android.ui.components.FormLabel
+import rw.rutongo.mmems.android.ui.components.PrimaryButton
+import rw.rutongo.mmems.android.ui.components.SecondaryButton
+import rw.rutongo.mmems.android.ui.components.SectionDivider
+import rw.rutongo.mmems.android.ui.components.SpecTextField
 import rw.rutongo.mmems.android.ui.components.StatusPill
+import rw.rutongo.mmems.android.ui.components.TimelineItem
+import rw.rutongo.mmems.android.ui.theme.SpecColors
+import rw.rutongo.mmems.android.ui.theme.SpecSpacing
+import rw.rutongo.mmems.android.ui.theme.SpecTypography
 import rw.rutongo.mmems.shared.api.BreakdownTransitionDto
 import rw.rutongo.mmems.shared.enums.BreakdownState
+import java.time.Instant
 
 private fun nextBreakdownStates(state: String): List<BreakdownState> =
     when (state) {
@@ -60,15 +63,21 @@ fun BreakdownDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Breakdown repair") },
-                navigationIcon = { OutlinedButton(onClick = onBack) { Text("Back") } },
+                title = { Text("Breakdown record", style = SpecTypography.SectionTitle) },
+                navigationIcon = { TextButton(onClick = onBack) { Text("Back") } },
+                colors =
+                    TopAppBarDefaults.topAppBarColors(
+                        containerColor = SpecColors.Background,
+                        titleContentColor = SpecColors.Text,
+                        navigationIconContentColor = SpecColors.Action,
+                    ),
             )
         },
     ) { padding ->
         val current = breakdown
         if (current == null) {
             Column(Modifier.fillMaxSize().padding(padding).padding(24.dp)) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(color = SpecColors.Action)
             }
             return@Scaffold
         }
@@ -86,97 +95,100 @@ fun BreakdownDetailScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+                .padding(horizontal = SpecSpacing.PhoneMargin, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(SpecSpacing.SectionGap),
         ) {
-            Text(current.equipment_code ?: current.equipment_id, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Text("${current.category} · started ${current.breakdown_start.take(16).replace('T', ' ')}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(current.equipment_code ?: current.equipment_id, style = SpecTypography.ScreenTitle)
+            Text("${current.category} · started ${current.breakdown_start.take(16).replace('T', ' ')}", style = SpecTypography.BodySmall)
             StatusPill(current.state)
-            SectionCard("Reported problem") {
-                Text(current.problem)
-                current.action_taken?.let { Text("Action: $it", style = MaterialTheme.typography.bodySmall) }
-                current.parts_required?.let { Text("Parts: $it", style = MaterialTheme.typography.bodySmall) }
-                current.remarks?.let { Text("Remarks: $it", style = MaterialTheme.typography.bodySmall) }
+            Text("Downtime ${downtime(current.breakdown_start, current.repair_end)}", style = SpecTypography.SectionTitle, color = SpecColors.Down)
+            SectionDivider()
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Reported problem", style = SpecTypography.Eyebrow)
+                Text(current.problem, style = SpecTypography.Body)
+                current.action_taken?.let { Text("Action: $it", style = SpecTypography.BodySmall) }
+                current.parts_required?.let { Text("Parts: $it", style = SpecTypography.BodySmall) }
+                current.remarks?.let { Text("Remarks: $it", style = SpecTypography.BodySmall) }
             }
-            SectionCard("Repair timeline", subtitle = "Stored as immutable server events with optimistic version checks.") {
-                Text("Breakdown start: ${current.breakdown_start.take(16).replace('T', ' ')}")
-                Text("Repair start: ${current.repair_start?.take(16)?.replace('T', ' ') ?: "not started"}")
-                Text("Repair end: ${current.repair_end?.take(16)?.replace('T', ' ') ?: "open"}")
-                Text("${current.defect_count} linked defect(s) · ${current.photo_count} photo(s)", style = MaterialTheme.typography.bodySmall)
+            SectionDivider()
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Repair timeline", style = SpecTypography.Eyebrow)
+                Text("Stored as immutable server events with optimistic version checks.", style = SpecTypography.BodySmall)
+                TimelineItem(
+                    title = "Breakdown reported",
+                    detail = "Breakdown start: ${current.breakdown_start.take(16).replace('T', ' ')}",
+                    status = "REPORTED",
+                )
+                TimelineItem(
+                    title = "Repair started",
+                    detail = "Repair start: ${current.repair_start?.take(16)?.replace('T', ' ') ?: "Not recorded"}",
+                    status = current.repair_start?.let { "UNDER_REPAIR" } ?: "NOT_RECORDED",
+                )
+                TimelineItem(
+                    title = "Repair completed",
+                    detail = "Repair end: ${current.repair_end?.take(16)?.replace('T', ' ') ?: "Not recorded"}",
+                    status = current.repair_end?.let { "RESOLVED" } ?: "NOT_RECORDED",
+                    isLast = true,
+                )
+                Text("${current.defect_count} linked defect(s) · ${current.photo_count} photo(s)", style = SpecTypography.BodySmall)
             }
             current.pending_state?.let { pending ->
-                Card(Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            if (pending == "CREATE") "Waiting to send this report" else "Repair update waiting to sync",
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Text(
-                            "The device keeps the full operation and retries it with WorkManager. Do not sign out until it reaches the server.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        if (pending == "CREATE") "Waiting to send this report" else "Repair update waiting to sync",
+                        style = SpecTypography.Body,
+                        color = SpecColors.Action,
+                    )
+                    Text(
+                        "The device keeps the full operation and retries it with WorkManager. Do not sign out until it reaches the server.",
+                        style = SpecTypography.BodySmall,
+                    )
                 }
             }
             if (current.pending_state == "CREATE") return@Column
             if (allowed.isEmpty()) {
-                Text("This breakdown is closed. Its history remains available.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text("This breakdown is closed. Its history remains available.", style = SpecTypography.BodySmall)
                 return@Column
             }
-            FieldLabel("Next repair state")
-            allowed.chunked(2).forEach { row ->
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                FormLabel("Next repair state")
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    row.forEach { state ->
-                        FilterChip(
+                    allowed.forEach { state ->
+                        FilterPill(
+                            text = state.name.lowercase().replace('_', ' '),
                             selected = target == state,
                             onClick = { target = state },
-                            label = { Text(state.name.lowercase().replace('_', ' ')) },
                             modifier = Modifier.weight(1f),
                         )
                     }
                 }
+                if (BreakdownState.UNDER_REPAIR in allowed) {
+                    SecondaryButton("Start repair", { target = BreakdownState.UNDER_REPAIR })
+                }
             }
-            OutlinedTextField(
-                value = actionTaken,
-                onValueChange = { actionTaken = it },
-                label = { Text("Action taken") },
-                minLines = 2,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = partsRequired,
-                onValueChange = { partsRequired = it },
-                label = { Text("Parts required") },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = remarks,
-                onValueChange = { remarks = it },
-                label = { Text("Remarks") },
-                minLines = 2,
-                modifier = Modifier.fillMaxWidth(),
-            )
+            SpecTextField(actionTaken, { actionTaken = it }, "Action taken", minLines = 2)
+            SpecTextField(partsRequired, { partsRequired = it }, "Parts required", singleLine = true)
+            SpecTextField(remarks, { remarks = it }, "Remarks", minLines = 2)
             if (queued) {
                 Text(
                     "Repair update queued. It will use If-Match version ${current.version} when it syncs.",
-                    color = MaterialTheme.colorScheme.primary,
-                    fontWeight = FontWeight.Bold,
+                    style = SpecTypography.BodySmall,
+                    color = SpecColors.Action,
                 )
             }
-            Button(
+            PrimaryButton(
+                text = "QUEUE REPAIR UPDATE",
+                enabled = target != null,
                 onClick = {
-                    val state = target ?: return@Button
+                    val state = target ?: return@PrimaryButton
                     container.store.enqueueBreakdownTransition(
                         breakdown = current,
                         transition =
                             BreakdownTransitionDto(
                                 state = state,
-                                actionTaken = actionTaken,
-                                partsRequired = partsRequired,
-                                remarks = remarks,
+                                actionTaken = actionTaken.ifBlank { null },
+                                partsRequired = partsRequired.ifBlank { null },
+                                remarks = remarks.ifBlank { null },
                             ),
                     )
                     SyncWorker.enqueueNow(container.appContext)
@@ -185,9 +197,25 @@ fun BreakdownDetailScreen(
                     partsRequired = ""
                     remarks = ""
                 },
-                enabled = target != null,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-            ) { Text("QUEUE REPAIR UPDATE") }
+            )
         }
     }
 }
+
+private fun downtime(
+    start: String,
+    end: String? = null,
+): String =
+    runCatching {
+        val finish = end?.let { Instant.parse(it) } ?: Instant.now()
+        val minutes =
+            java.time.Duration
+                .between(Instant.parse(start), finish)
+                .toMinutes()
+                .coerceAtLeast(0)
+        when {
+            minutes >= 1440 -> "${minutes / 1440} d ${(minutes % 1440) / 60} h"
+            minutes >= 60 -> "${minutes / 60} h ${minutes % 60} m"
+            else -> "$minutes m"
+        }
+    }.getOrDefault("Not recorded")

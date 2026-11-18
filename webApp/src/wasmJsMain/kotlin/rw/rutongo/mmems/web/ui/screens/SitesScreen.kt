@@ -24,6 +24,7 @@ import rw.rutongo.mmems.web.WebState
 import rw.rutongo.mmems.web.ui.InfoBlue
 import rw.rutongo.mmems.web.ui.SuccessGreen
 import rw.rutongo.mmems.web.ui.WarningAmber
+import rw.rutongo.mmems.web.ui.WebSpecColors
 import rw.rutongo.mmems.web.ui.components.EmptyState
 import rw.rutongo.mmems.web.ui.components.LoadingBlock
 import rw.rutongo.mmems.web.ui.components.MetricCard
@@ -56,7 +57,8 @@ fun SitesScreen(
                         val metrics = comparison.firstOrNull { it.siteId == site.id }
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            colors = CardDefaults.cardColors(containerColor = WebSpecColors.Background),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                         ) {
                             Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {

@@ -23,7 +23,7 @@ test('manager loads daily reports from the reports tab', async ({ page }) => {
   await page.goto('/');
   await waitForApp(page, 'stage=HOME;tab=DASHBOARD;role=MANAGER');
 
-  await page.mouse.click(40, 340);
+  await page.mouse.click(100, 405);
   await waitForApp(page, 'tab=REPORTS;role=MANAGER');
   await waitForApp(page, 'reports=2');
 

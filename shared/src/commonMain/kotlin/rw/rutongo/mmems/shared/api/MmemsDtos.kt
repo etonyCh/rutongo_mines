@@ -403,22 +403,91 @@ import rw.rutongo.mmems.shared.enums.WorkingHoursGroupBy
     val uploadedAt: String,
 )
 
-@Serializable data class InspectionDetailDto(
+@Serializable data class InspectionSummaryDto(
     val id: String,
     val clientUuid: String,
-    val state: String,
+    val expectationId: String? = null,
+    val equipmentId: String,
+    val siteId: String,
+    val tunnelId: String? = null,
+    val shiftId: String,
+    val reportDate: String,
+    val operatorId: String? = null,
+    val operatorEid: String? = null,
+    val inspectorId: String,
+    val inspectorEid: String,
+    val supervisorId: String? = null,
+    val engineHoursStart: Double? = null,
+    val engineHoursEnd: Double? = null,
+    val fuelStartPercent: Double? = null,
+    val fuelAddedLitres: Double? = null,
     val result: String,
     val submittedLate: Boolean,
+    val hoursWarnings: List<String> = emptyList(),
+    val capturedAt: String,
+    val startedAt: String,
     val submittedAt: String,
 )
 
-@Serializable data class StatusEventDto(
+@Serializable data class InspectionDetailDto(
+    val inspection: InspectionSummaryDto,
+    val answers: List<InspectionAnswerDto> = emptyList(),
+    val defects: List<InspectionDefectDto> = emptyList(),
+)
+
+@Serializable data class InspectionAnswerDto(
+    val itemId: String,
+    val category: String,
+    val label: String,
+    val answer: String,
+    val naReason: String? = null,
+    val defectId: String? = null,
+    val photoIds: List<String> = emptyList(),
+)
+
+@Serializable data class InspectionDefectDto(
     val id: String,
     val equipmentId: String,
-    val status: String,
+    val inspectionId: String? = null,
+    val checklistItemId: String? = null,
+    val category: String,
+    val description: String,
+    val severity: String,
+    val immediateAction: String? = null,
+    val state: String,
+    val breakdownId: String? = null,
+    val reportedBy: String,
+    val reportedAt: String,
+    val resolvedAt: String? = null,
+    val resolvedBy: String? = null,
+    val version: Long,
+)
+
+@Serializable data class StatusEventViewDto(
+    val id: String,
+    val equipmentId: String,
+    val sequence: Long,
+    val previousStatus: String? = null,
+    val newStatus: String,
+    val problem: String? = null,
+    val actionTaken: String? = null,
+    val partsRequired: String? = null,
+    val remarks: String? = null,
+    val siteId: String,
+    val tunnelId: String? = null,
+    val shiftId: String? = null,
+    val userId: String,
+    val userEid: String,
     val occurredAt: String,
     val recordedAt: String,
-    val version: Long,
+    val source: String,
+    val overrideReason: String? = null,
+)
+
+@Serializable data class StatusResultDto(
+    val event: StatusEventViewDto,
+    val equipmentVersion: Long,
+    val projected: Boolean,
 )
 
 @Serializable data class PartStockViewDto(

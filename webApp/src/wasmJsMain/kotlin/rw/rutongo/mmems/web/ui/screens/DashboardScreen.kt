@@ -37,6 +37,7 @@ import rw.rutongo.mmems.web.ui.DangerRed
 import rw.rutongo.mmems.web.ui.InfoBlue
 import rw.rutongo.mmems.web.ui.SuccessGreen
 import rw.rutongo.mmems.web.ui.WarningAmber
+import rw.rutongo.mmems.web.ui.WebSpecColors
 import rw.rutongo.mmems.web.ui.components.EmptyState
 import rw.rutongo.mmems.web.ui.components.LoadingBlock
 import rw.rutongo.mmems.web.ui.components.MetricCard
@@ -136,7 +137,10 @@ private fun DashboardContent(dashboard: DashboardDto) {
         Spacer(Modifier.height(6.dp))
         SectionTitle("Site comparison", "Equipment, inspections, breakdowns and approved reports by site")
         Spacer(Modifier.height(10.dp))
-        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = WebSpecColors.Background),
+            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        ) {
             Column(modifier = Modifier.horizontalScroll(rememberScrollState())) {
                 ComparisonHeader()
                 rows.forEach { row ->

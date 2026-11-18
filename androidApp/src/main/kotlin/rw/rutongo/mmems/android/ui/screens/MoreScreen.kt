@@ -9,9 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -21,12 +18,18 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import rw.rutongo.mmems.android.AppContainer
 import rw.rutongo.mmems.android.sync.SyncWorker
+import rw.rutongo.mmems.android.ui.components.DangerButton
+import rw.rutongo.mmems.android.ui.components.PrimaryButton
+import rw.rutongo.mmems.android.ui.components.ScreenHeader
+import rw.rutongo.mmems.android.ui.components.SecondaryButton
 import rw.rutongo.mmems.android.ui.components.SectionCard
+import rw.rutongo.mmems.android.ui.theme.SpecColors
+import rw.rutongo.mmems.android.ui.theme.SpecSpacing
+import rw.rutongo.mmems.android.ui.theme.SpecTypography
 import rw.rutongo.mmems.shared.api.MeView
 
 @Composable
@@ -47,48 +50,52 @@ fun MoreScreen(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+            .padding(horizontal = SpecSpacing.PhoneMargin),
+        verticalArrangement = Arrangement.spacedBy(SpecSpacing.SectionGap),
     ) {
-        Text("More", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        ScreenHeader(eyebrow = me.role.name.replace('_', ' '), title = "More")
         SectionCard("Account", subtitle = "${me.fullName} · ${me.employeeId}") {
-            Text(me.role.name.replace('_', ' '), fontWeight = FontWeight.Bold)
-            Text("${me.siteIds.size} site assignment(s)", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(me.role.name.replace('_', ' '), style = SpecTypography.Body)
+            Text("${me.siteIds.size} site assignment(s)", style = SpecTypography.BodySmall)
         }
         SectionCard("Synchronisation", subtitle = "WORK MANAGER · 15 MINUTE BACKGROUND SYNC") {
-            Text("$pendingOps pending operation(s)")
-            Text("$pendingPhotos pending photo(s)")
-            Text("Last reference sync: ${container.store.lastReferenceSync() ?: "never"}", style = MaterialTheme.typography.bodySmall)
-            Button(onClick = { SyncWorker.enqueueNow(container.appContext) }, modifier = Modifier.fillMaxWidth()) { Text("SYNC NOW") }
+            Text("$pendingOps pending operation(s)", style = SpecTypography.Body)
+            Text("$pendingPhotos pending photo(s)", style = SpecTypography.Body)
+            Text("Last reference sync: ${container.store.lastReferenceSync() ?: "never"}", style = SpecTypography.BodySmall)
+            PrimaryButton("SYNC NOW", { SyncWorker.enqueueNow(container.appContext) })
         }
         if (failedOps.isNotEmpty()) {
             SectionCard("Synchronisation issues", subtitle = "Nothing is discarded automatically. Review each conflict against the server state.") {
                 failedOps.forEach { operation ->
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("${operation.kind} · ${container.store.equipment(operation.equipment_id)?.name ?: operation.equipment_id}", fontWeight = FontWeight.Bold)
+                        Text("${operation.kind} · ${container.store.equipment(operation.equipment_id)?.name ?: operation.equipment_id}", style = SpecTypography.Body)
                         Text(
                             operation.last_error ?: operation.conflict_state ?: "The server rejected this operation.",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error,
+                            style = SpecTypography.BodySmall,
+                            color = SpecColors.ErrorText,
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             if (operation.state == "CONFLICT" && operation.kind == "STATUS") {
-                                Button(
-                                    onClick = {
+                                PrimaryButton(
+                                    "RE-READ EQUIPMENT",
+                                    {
                                         container.store.discardOutbox(operation.client_uuid)
                                         onReviewConflict(operation.equipment_id)
                                     },
-                                ) { Text("RE-READ EQUIPMENT") }
+                                    Modifier.weight(1f),
+                                )
                             }
                             if (operation.state == "CONFLICT" && operation.kind == "BREAKDOWN_TRANSITION" && operation.server_reference != null) {
-                                Button(
-                                    onClick = {
+                                PrimaryButton(
+                                    "RE-READ BREAKDOWN",
+                                    {
                                         container.store.discardOutbox(operation.client_uuid)
                                         onReviewBreakdown(operation.server_reference!!)
                                     },
-                                ) { Text("RE-READ BREAKDOWN") }
+                                    Modifier.weight(1f),
+                                )
                             }
-                            OutlinedButton(onClick = { container.store.discardOutbox(operation.client_uuid) }) { Text("DISCARD") }
+                            DangerButton("DISCARD", { container.store.discardOutbox(operation.client_uuid) }, Modifier.weight(1f))
                         }
                     }
                 }
@@ -102,18 +109,13 @@ fun MoreScreen(
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            OutlinedButton(
-                onClick = { container.settings.apiBaseUrl = baseUrl },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text("SAVE SERVER URL") }
+            SecondaryButton("SAVE SERVER URL", { container.settings.apiBaseUrl = baseUrl })
         }
         SectionCard("Device data", subtitle = "The local database is encrypted with a random device key.") {
-            Text("Inspections, reference data and pending photos stay on this device until synchronised.")
-            Text("Pending photos are kept in the app cache and retried by WorkManager.", style = MaterialTheme.typography.bodySmall)
+            Text("Inspections, reference data and pending photos stay on this device until synchronised.", style = SpecTypography.Body)
+            Text("Pending photos are kept in the app cache and retried by WorkManager.", style = SpecTypography.BodySmall)
         }
-        OutlinedButton(onClick = { confirmLogout = true }, modifier = Modifier.fillMaxWidth()) {
-            Text(if (pendingOps > 0) "SIGN OUT (UNSYNCED WORK)" else "SIGN OUT")
-        }
+        DangerButton(if (pendingOps > 0) "SIGN OUT (UNSYNCED WORK)" else "SIGN OUT", { confirmLogout = true })
     }
     if (confirmLogout) {
         AlertDialog(
